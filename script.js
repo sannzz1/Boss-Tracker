@@ -1,7 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // URL da sua aplicação web do Google Apps Script (COPIE AQUI!)
-    const GAS_WEB_APP_URL = 'SEU_URL_DO_APP_WEB_AQUI'; 
-
+    // Referências aos elementos HTML
     const redBossListContainer = document.getElementById('redBossListContainer');
     const yellowBossListContainer = document.getElementById('yellowBossListContainer');
     const cyanBossListContainer = document.getElementById('cyanBossListContainer');
@@ -12,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetAllDataBtn = document.getElementById('resetAllData');
 
     // --- Função: Calcula o próximo horário de spawn fixo para bosses vermelhos ---
+    // (Lógica inalterada, pois é local e funciona bem)
     function calculateNextSpecificSpawnTime(dailySpawnTimes) {
         const now = new Date();
         let nextSpawnMs = null;
@@ -39,26 +38,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Dados dos Bosses - Agora agrupados por tipo ---
+    // --- Dados dos Bosses ---
+    // (Inalterados, definidos diretamente no script)
     const bosses = {
         red: [
             { id: 'red-boss-1', name: 'Demonio do Fogo (Norte)', type: 'red', dailySpawnTimes: ['04:00', '10:00', '16:00', '22:00'], icon: '👹' },
             { id: 'red-boss-2', name: 'Rei Carmesim (Sul)', type: 'red', dailySpawnTimes: ['01:00', '07:00', '13:00', '19:00'], icon: '🔱' },
         ],
         yellow: [
-            { id: 'yellow-boss-1', name: 'Guardião Dourado', type: 'yellow', respawnTime: 60 * 60 * 1000, icon: '��' },
+            { id: 'yellow-boss-1', name: 'Guardião Dourado', type: 'yellow', respawnTime: 60 * 60 * 1000, icon: '👺' },
             { id: 'yellow-boss-2', name: 'Lobo Alfa', type: 'yellow', respawnTime: 60 * 60 * 1000, icon: '🦁' },
         ],
         cyan: [
-            { id: 'cyan-boss-1', name: 'Espírito Ciano (Baixo-direita)', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '��' },
-            { id: 'cyan-boss-2', name: 'Guardião Ciano (Meio-esquerda)', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '🔵' },
+            { id: 'cyan-boss-1', name: 'Espírito Ciano (Baixo-direita)', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '🔵' },
+            { id: 'cyan-boss-2', name: 'Guardião Ciano (Meio-esquerda)', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '��' },
             { id: 'cyan-boss-3', name: 'Protetor Ciano (Meio-superior)', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '🔵' }
         ]
     };
 
-    let bossStates = {};
-    let userReservation = { nickname: '', reservationUntil: null };
-    let killLog = []; // killLog será preenchido pelo Google Sheet
+    let bossStates = {}; // Estado atual dos timers dos bosses (local)
+    let userReservation = { nickname: '', reservationUntil: null }; // Reserva do usuário (local)
+    let killLog = []; // Histórico de kills (local)
 
     // --- Funções de Utilitário ---
     function formatTime(ms) {
@@ -69,23 +69,27 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    // --- Persistência de Dados (localStorage para bossStates e reservation) ---
+    // --- Persistência de Dados (usando localStorage) ---
+    // Agora salva TUDO no localStorage do navegador do usuário
     function saveData() {
         localStorage.setItem('bossTracker_bossStates', JSON.stringify(bossStates));
         localStorage.setItem('bossTracker_userReservation', JSON.stringify(userReservation));
+        localStorage.setItem('bossTracker_killLog', JSON.stringify(killLog));
         localStorage.setItem('bossTracker_lastNickname', nicknameInput.value);
-        // killLog não é mais salvo localmente, é gerido pelo Google Sheet
     }
 
-    async function loadData() {
+    // Carrega TUDO do localStorage do navegador do usuário
+    function loadData() {
         const savedBossStates = localStorage.getItem('bossTracker_bossStates');
         const savedUserReservation = localStorage.getItem('bossTracker_userReservation');
+        const savedKillLog = localStorage.getItem('bossTracker_killLog'); // Carrega o histórico
         const lastNickname = localStorage.getItem('bossTracker_lastNickname');
 
         const allBosses = [...bosses.red, ...bosses.yellow, ...bosses.cyan];
 
         if (savedBossStates) {
             bossStates = JSON.parse(savedBossStates);
+            // Garante que novos bosses ou bosses com IDs alterados sejam inicializados
             allBosses.forEach(boss => {
                 if (!bossStates[boss.id]) {
                     if (boss.type === 'red') {
@@ -99,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             nextSpawnTime: Date.now()
                         };
                     }
-                } else if (boss.type === 'red') {
+                } else if (boss.type === 'red') { // Para bosses vermelhos, recalcula o próximo spawn se o salvo for passado
                     const currentNextSpawnTime = bossStates[boss.id].nextSpawnTime;
                     const now = Date.now();
                     if (currentNextSpawnTime <= now) {
@@ -107,12 +111,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
+            // Remove bosses que não existem mais na lista atual (limpeza)
             for (const id in bossStates) {
                 if (!allBosses.some(boss => boss.id === id)) {
                     delete bossStates[id];
                 }
             }
         } else {
+            // Inicializa todos os bosses se não houver dados salvos
             allBosses.forEach(boss => {
                 if (boss.type === 'red') {
                     bossStates[boss.id] = {
@@ -128,72 +134,20 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        // Carrega a reserva do usuário
         if (savedUserReservation) {
             userReservation = JSON.parse(savedUserReservation);
         }
+        // Carrega o histórico de kills
+        if (savedKillLog) {
+            killLog = JSON.parse(savedKillLog);
+        }
+        // Carrega o último nickname usado
         if (lastNickname) {
             nicknameInput.value = lastNickname;
         }
-        saveData(); // Salva estados atualizados/limpos no localStorage
-        await fetchKillLogFromGoogleSheet(); // Carrega o histórico da planilha
+        saveData(); // Salva os dados atualizados/limpos para garantir consistência
     }
-
-    // --- Comunicação com Google Apps Script ---
-    async function fetchKillLogFromGoogleSheet() {
-        try {
-            const response = await fetch(GAS_WEB_APP_URL, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                //mode: 'no-cors' // Use se houver problemas de CORS, mas CORS é preferível
-            });
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            // Assumimos que o Apps Script retorna um array de objetos
-            // e que o campo Timestamp é um timestamp Unix ou ISO string
-            killLog = data.map(record => ({
-                bossId: record.BossId,
-                bossName: record.BossName,
-                user: record.KilledBy,
-                // Converte a string de data para um objeto Date
-                time: new Date(record.Timestamp).getTime() 
-            }));
-            renderKillLog(); // Renderiza o log após carregar
-        } catch (error) {
-            console.error('Erro ao buscar histórico da planilha:', error);
-            killLogList.innerHTML = '<li>Erro ao carregar histórico.</li>';
-        }
-    }
-
-    async function sendKillToGoogleSheet(killData) {
-        try {
-            const response = await fetch(GAS_WEB_APP_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(killData),
-                //mode: 'no-cors' // Use se houver problemas de CORS
-            });
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const result = await response.json();
-            if (result.success) {
-                console.log('Kill registrada na planilha:', result.message);
-                // Após o sucesso, força a atualização do log
-                await fetchKillLogFromGoogleSheet(); 
-            } else {
-                console.error('Erro ao registrar kill na planilha:', result.message);
-            }
-        } catch (error) {
-            console.error('Erro de rede ao enviar kill para planilha:', error);
-        }
-    }
-
 
     // --- Renderização da UI ---
     function renderBossLists() {
@@ -300,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    async function handleBossKill(bossId) {
+    function handleBossKill(bossId) {
         let boss = null;
         for (const type in bosses) {
             boss = bosses[type].find(b => b.id === bossId);
@@ -314,28 +268,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (boss.type !== 'red') {
             bossStates[boss.id].lastKillTime = now;
             bossStates[boss.id].nextSpawnTime = now + boss.respawnTime;
-            saveData(); // Salva o novo estado no localStorage
         }
 
-        // Envia a informação da kill para o Google Sheet
-        const killData = {
+        // Adiciona a kill ao histórico local
+        killLog.push({
+            bossId: boss.id,
             bossName: boss.name,
             user: nickname,
-            bossId: boss.id,
-            bossType: boss.type
-        };
-        await sendKillToGoogleSheet(killData); // Agora é assíncrono
-
-        // updateUI() será chamado após a confirmação da gravação na planilha.
-        // O fetchKillLogFromGoogleSheet() dentro de sendKillToGoogleSheet() já chama renderKillLog().
-        renderBossLists(); // Atualiza apenas os timers
-        updateReservationStatus();
+            time: now
+        });
+        saveData(); // Salva todas as alterações no localStorage
+        updateUI(); // Atualiza a interface
     }
 
     resetAllDataBtn.addEventListener('click', () => {
-        if (confirm('Tem certeza que deseja apagar TODOS os dados (timers locais e reservas)? O histórico da planilha não será afetado.')) {
+        if (confirm('Tem certeza que deseja apagar TODOS os seus dados locais (timers, reservas e histórico)? Esta ação é irreversível e afetará apenas este navegador.')) {
             localStorage.clear();
-            // Recarrega para inicializar bossStates corretamente após o reset
+            // Recarrega a página para reinicializar o estado
             location.reload();
         }
     });
@@ -343,14 +292,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Loop de Atualização ---
     function updateUI() {
         renderBossLists();
+        renderKillLog(); // Atualiza o log local
         updateReservationStatus();
     }
 
     // --- Inicialização ---
-    loadData();
-    updateUI(); // Renderiza os elementos iniciais
-    setInterval(updateUI, 1000); // Atualiza UI a cada segundo para os contadores
-
-    // A cada 2 minutos (120000 ms), busca o log da planilha
-    setInterval(fetchKillLogFromGoogleSheet, 120000); 
+    loadData(); // Carrega os dados salvos localmente
+    updateUI(); // Renderiza a interface pela primeira vez
+    setInterval(updateUI, 1000); // Atualiza a UI a cada segundo para os contadores
 });
