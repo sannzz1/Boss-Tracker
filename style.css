@@ -1,0 +1,279 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #2c3e50; /* Azul escuro */
+    color: #ecf0f1; /* Branco levemente acinzentado */
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+header {
+    background-color: #34495e; /* Azul mais escuro */
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+header h1 {
+    margin: 0;
+    color: #ecf0f1;
+}
+
+header p {
+    color: #bdc3c7;
+}
+
+main {
+    flex-grow: 1;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 20px auto;
+    background-color: #34495e;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+@media (min-width: 768px) {
+    main {
+        grid-template-columns: 1fr 1fr;
+    }
+    .map-section {
+        grid-column: 1 / 2;
+        grid-row: 1 / 3; /* Ocupa duas linhas na coluna 1 */
+    }
+    .user-section {
+        grid-column: 2 / 3;
+        grid-row: 1 / 2;
+    }
+    .boss-list-section {
+        grid-column: 2 / 3;
+        grid-row: 2 / 3;
+    }
+    .log-section {
+        grid-column: 1 / 3; /* Ocupa as duas colunas */
+    }
+}
+
+
+section {
+    background-color: #2c3e50;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+h2 {
+    color: #1abc9c; /* Verde água */
+    border-bottom: 2px solid #16a085;
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+
+/* User Section */
+.user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+#nicknameInput {
+    padding: 10px;
+    border: 1px solid #16a085;
+    border-radius: 5px;
+    background-color: #34495e;
+    color: #ecf0f1;
+}
+
+#nicknameInput::placeholder {
+    color: #bdc3c7;
+}
+
+button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    background-color: #1abc9c; /* Verde água */
+    color: white;
+    font-weight: bold;
+}
+
+button:hover {
+    background-color: #16a085; /* Verde mais escuro no hover */
+}
+
+.reset-button {
+    background-color: #e74c3c; /* Vermelho */
+    margin-top: 20px;
+}
+.reset-button:hover {
+    background-color: #c0392b;
+}
+
+
+#reservationStatus {
+    margin-top: 10px;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #f1c40f; /* Amarelo */
+}
+
+/* Map Section */
+.map-container {
+    position: relative;
+    width: 100%;
+    /* 56.25% para 16:9, ajuste conforme a proporção da sua imagem */
+    padding-bottom: 75%; /* Ajustado para a proporção da imagem fornecida (4:3) */
+    height: 0;
+    overflow: hidden;
+    background-color: #1a252f; /* Fundo escuro para a área do mapa */
+    border-radius: 8px;
+}
+
+#gameMap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Garante que a imagem se ajuste sem cortar */
+}
+
+.boss-marker {
+    position: absolute;
+    width: 40px; /* Tamanho dos ícones dos bosses */
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: white;
+    font-size: 0.8em;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    transition: transform 0.2s ease-in-out;
+    background-size: cover;
+    background-position: center;
+    border: 2px solid transparent;
+}
+
+.boss-marker:hover {
+    transform: scale(1.1);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.boss-marker.red { background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90" fill="red">👹</text></svg>'); background-color: rgba(255, 0, 0, 0.5); }
+.boss-marker.yellow { background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90" fill="gold">👺</text></svg>'); background-color: rgba(255, 200, 0, 0.5); }
+/* Novo estilo para bosses ciano */
+.boss-marker.cyan { background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90" fill="cyan">🔵</text></svg>'); background-color: rgba(0, 255, 255, 0.5); }
+
+
+/* Indicador de Status no mapa */
+.boss-marker .timer-map {
+    position: absolute;
+    bottom: -15px;
+    width: max-content;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 0.7em;
+    white-space: nowrap;
+}
+
+/* Boss List Section */
+.boss-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+}
+
+.boss-card {
+    background-color: #34495e;
+    border-radius: 8px;
+    padding: 15px;
+    width: 100%;
+    max-width: 250px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.boss-card.red { border-left: 5px solid red; }
+.boss-card.yellow { border-left: 5px solid gold; }
+/* Novo estilo para cards ciano */
+.boss-card.cyan { border-left: 5px solid cyan; }
+
+.boss-card h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #ecf0f1;
+}
+
+.boss-card p {
+    margin: 5px 0;
+    font-size: 0.95em;
+}
+
+.boss-card .status-text {
+    font-weight: bold;
+    color: #f1c40f; /* Amarelo */
+    font-size: 1.1em;
+    margin-bottom: 10px;
+}
+
+.boss-card .kill-button {
+    background-color: #27ae60; /* Verde escuro */
+    margin-top: 10px;
+    display: block; /* Garante que o botão ocupe a largura total */
+    width: 100%;
+    box-sizing: border-box; /* Inclui padding e border na largura */
+}
+
+.boss-card .kill-button:hover {
+    background-color: #229a53;
+}
+
+/* Log Section */
+#killLog {
+    list-style: none;
+    padding: 0;
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid #16a085;
+    border-radius: 5px;
+    background-color: #34495e;
+}
+
+#killLog li {
+    padding: 8px 15px;
+    border-bottom: 1px dashed #4e6a87;
+    font-size: 0.9em;
+}
+
+#killLog li:last-child {
+    border-bottom: none;
+}
+
+#killLog li strong {
+    color: #1abc9c;
+}
+
+footer {
+    text-align: center;
+    padding: 15px;
+    background-color: #34495e;
+    color: #bdc3c7;
+    font-size: 0.9em;
+    margin-top: 20px;
+}

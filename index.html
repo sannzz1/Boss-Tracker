@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boss Tracker - Seu Jogo Online</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
+</head>
+<body>
+    <header>
+        <h1>Boss Tracker</h1>
+        <p>Gerencie o respawn dos bosses do seu jogo.</p>
+    </header>
+
+    <main>
+        <section class="user-section">
+            <div class="user-info">
+                <input type="text" id="nicknameInput" placeholder="Seu Nickname" maxlength="20">
+                <button id="reserveEntryBtn">Reservar Entrada (30min)</button>
+                <div id="reservationStatus"></div>
+            </div>
+            <button id="resetAllData" class="reset-button">Reiniciar Tudo (Cuidado!)</button>
+        </section>
+
+        <section class="map-section">
+            <div class="map-container">
+                <img src="mapa.png" alt="Mapa do Jogo" id="gameMap">
+                <!-- Bosses serão injetados aqui via JavaScript -->
+            </div>
+        </section>
+
+        <section class="boss-list-section">
+            <h2>Status dos Bosses</h2>
+            <div id="bossListContainer" class="boss-list">
+                <!-- Detalhes dos bosses serão injetados aqui via JavaScript -->
+            </div>
+        </section>
+
+        <section class="log-section">
+            <h2>Histórico de Kills</h2>
+            <ul id="killLog">
+                <!-- Kills serão registrados aqui via JavaScript -->
+            </ul>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 Boss Tracker. Desenvolvido para jogadores.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
