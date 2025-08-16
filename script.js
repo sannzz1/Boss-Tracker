@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // COLE O URL DO SEU APLICATIVO WEB DO GOOGLE APPS SCRIPT AQUI!
     // Este URL é o que você COPIOU no PASSO 2.5
-    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxLJY5HdH-o9BNEteiceGxzakWrOofR8pCnYeTBfJJ2nxPLuKIuaWp3n_qZ9iojX0wO/exec'; 
+    const GAS_WEB_APP_URL = https://script.google.com/macros/s/AKfycbxLJY5HdH-o9BNEteiceGxzakWrOofR8pCnYeTBfJJ2nxPLuKIuaWp3n_qZ9iojX0wO/exec; 
 
     // Referências aos elementos HTML
     const redBossListContainer = document.getElementById('redBossListContainer');
@@ -348,3 +348,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // A cada 2 minutos (120 segundos), busca o histórico atualizado da planilha
     setInterval(fetchKillLogFromGoogleSheet, 120000); 
 });
+
