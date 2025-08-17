@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Boss Tracker - Pico 7F</title> <!-- Título da página específico para a instância -->
+    <title>Boss Tracker - Pico 7F</title>
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
 </head>
-<body data-instance-id="pico7f"> <!-- Identificador da instância para o JavaScript -->
+<body data-instance-id="pico7f">
     <header>
         <h1>Boss Tracker</h1>
         <p>Gerencie o respawn de bosses e recursos do seu jogo por instância!</p>
@@ -30,7 +30,6 @@
                 <button id="reserveEntryBtn">Reservar Entrada (30min)</button>
                 <div id="reservationStatus"></div>
             </div>
-            <!-- Botão de Reiniciar Tudo foi removido -->
         </section>
 
         <section class="boss-display-section">
@@ -82,10 +81,12 @@
       };
       // --------------------------------------------------------------------------
 
-      // Importe as funções necessárias dos SDKs do Firebase (CORREÇÃO AQUI)
+      // Importe as funções necessárias dos SDKs do Firebase (MUDANÇA AQUI)
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-      // Onde 'where as firebaseWhere' está na importação e no window.firebaseWhere
-      import { getFirestore, collection, addDoc, getDocs, query, orderBy, where as firebaseWhere } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+      import { 
+          getFirestore, collection, addDoc, getDocs, query, orderBy, where as firebaseWhere,
+          doc, getDoc, setDoc, updateDoc // NOVAS IMPORTAÇÕES
+      } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
       // Inicialize o Firebase
       const app = initializeApp(firebaseConfig);
@@ -98,7 +99,12 @@
       window.firebaseGetDocs = getDocs;
       window.firebaseQuery = query;
       window.firebaseOrderBy = orderBy;
-      window.firebaseWhere = firebaseWhere; // CORREÇÃO AQUI
+      window.firebaseWhere = firebaseWhere;
+      // NOVAS EXPOSIÇÕES GLOBAIS
+      window.firebaseDoc = doc; 
+      window.firebaseGetDoc = getDoc;
+      window.firebaseSetDoc = setDoc;
+      window.firebaseUpdateDoc = updateDoc;
     </script>
     <!-- FIM: Scripts do Firebase -->
 
