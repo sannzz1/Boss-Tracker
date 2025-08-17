@@ -1,14 +1,31 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Referências aos elementos HTML
+    // --- Nova funcionalidade: Gerenciamento de Instâncias ---
+    const currentInstanceId = document.body.dataset.instanceId || 'pico7f'; // Pega o ID da instância do HTML
+    const instanceSelector = document.getElementById('instanceSelector');
+    const goToInstanceBtn = document.getElementById('goToInstanceBtn');
+    const actionLogList = document.getElementById('actionLog'); // ID do log agora é actionLog
+
+    // Define o seletor para a instância atual
+    if (instanceSelector) {
+        instanceSelector.value = currentInstanceId;
+        goToInstanceBtn.addEventListener('click', () => {
+            const selectedInstance = instanceSelector.value;
+            if (selectedInstance !== currentInstanceId) {
+                // Redireciona para o arquivo HTML correspondente
+                window.location.href = `${selectedInstance}.html`;
+            }
+        });
+    }
+
+    // Referências aos elementos HTML (restante)
     const redBossListContainer = document.getElementById('redBossListContainer');
     const yellowBossListContainer = document.getElementById('yellowBossListContainer');
     const cyanBossListContainer = document.getElementById('cyanBossListContainer');
-    const resourceListContainer = document.getElementById('resourceListContainer'); // Nova referência
-    const killLogList = document.getElementById('killLog');
+    const resourceListContainer = document.getElementById('resourceListContainer');
     const nicknameInput = document.getElementById('nicknameInput');
     const reserveEntryBtn = document.getElementById('reserveEntryBtn');
     const reservationStatus = document.getElementById('reservationStatus');
-    const resetAllDataBtn = document.getElementById('resetAllData');
+    // Botão de Reiniciar Tudo foi removido
 
     // --- Função: Calcula o próximo horário de spawn fixo para bosses vermelhos ---
     function calculateNextSpecificSpawnTime(dailySpawnTimes) {
@@ -50,13 +67,13 @@ document.addEventListener('DOMContentLoaded', () => {
         ],
         cyan: [
             { id: 'cyan-boss-1', name: 'Azul 1', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '💧' },
-            { id: 'cyan-boss-2', name: 'Azul 2', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '🔵' },
+            { id: 'cyan-boss-2', name: 'Azul 2', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '��' },
             { id: 'cyan-boss-3', name: 'Azul 3', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '❄️' },
             { id: 'cyan-boss-4', name: 'Azul 4', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '🧊' }
         ],
-        resource: [ // Novos recursos
-            { id: 'resource-ore', name: 'Minério Lendário', type: 'resource', respawnTime: 60 * 60 * 1000, icon: '✨' }, // 1 hora
-            { id: 'resource-plant', name: 'Planta Lendária', type: 'resource', respawnTime: 60 * 60 * 1000, icon: '🌿' }, // 1 hora
+        resource: [
+            { id: 'resource-ore', name: 'Minério Lendário', type: 'resource', respawnTime: 60 * 60 * 1000, icon: '✨' },
+            { id: 'resource-plant', name: 'Planta Lendária', type: 'resource', respawnTime: 60 * 60 * 1000, icon: '🌿' },
         ]
     };
 
@@ -73,26 +90,29 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
+    // Ajustado para formatar para o horário de Brasília (UTC-3)
     function formatDateTime(timestamp) {
-        return new Date(timestamp).toLocaleString();
+        return new Date(timestamp).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', hour12: false });
     }
 
     // --- Persistência de Dados Locais (localStorage) ---
+    // Agora os dados locais são específicos da instância
     function saveData() {
-        localStorage.setItem('bossTracker_itemStates', JSON.stringify(itemStates));
-        localStorage.setItem('bossTracker_userReservation', JSON.stringify(userReservation));
-        localStorage.setItem('bossTracker_lastNickname', nicknameInput.value);
+        localStorage.setItem(`bossTracker_${currentInstanceId}_itemStates`, JSON.stringify(itemStates));
+        localStorage.setItem(`bossTracker_${currentInstanceId}_userReservation`, JSON.stringify(userReservation));
+        localStorage.setItem(`bossTracker_lastNickname`, nicknameInput.value); // Nickname pode ser compartilhado
     }
 
     async function loadData() {
-        const savedItemStates = localStorage.getItem('bossTracker_itemStates');
-        const savedUserReservation = localStorage.getItem('bossTracker_userReservation');
-        const lastNickname = localStorage.getItem('bossTracker_lastNickname');
+        const savedItemStates = localStorage.getItem(`bossTracker_${currentInstanceId}_itemStates`);
+        const savedUserReservation = localStorage.getItem(`bossTracker_${currentInstanceId}_userReservation`);
+        const lastNickname = localStorage.getItem(`bossTracker_lastNickname`);
 
         const allItemsFlat = [...items.red, ...items.yellow, ...items.cyan, ...items.resource];
 
         if (savedItemStates) {
             itemStates = JSON.parse(savedItemStates);
+            // Garante que novos itens sejam inicializados e itens removidos sejam limpos
             allItemsFlat.forEach(item => {
                 if (!itemStates[item.id]) {
                     if (item.type === 'red') {
@@ -142,12 +162,17 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchActionLogFromFirestore() {
         if (!window.db) {
             console.error('ERRO: Firebase não inicializado.');
-            killLogList.innerHTML = '<li>Erro: Firebase não configurado.</li>';
+            actionLogList.innerHTML = '<li>Erro: Firebase não configurado.</li>';
             return;
         }
         try {
-            const killsCol = window.firebaseCollection(window.db, 'kills'); // Mantendo a coleção 'kills'
-            const q = window.firebaseQuery(killsCol, window.firebaseOrderBy('timestamp', 'desc'));
+            const killsCol = window.firebaseCollection(window.db, 'actions'); // Usando nova coleção 'actions'
+            // Filtra o log pela instância atual
+            const q = window.firebaseQuery(
+                killsCol,
+                window.firebaseWhere('instanceId', '==', currentInstanceId), // Filtra por instância
+                window.firebaseOrderBy('timestamp', 'desc')
+            );
 
             const querySnapshot = await window.firebaseGetDocs(q);
             actionLog = [];
@@ -157,14 +182,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     itemId: data.itemId,
                     itemName: data.itemName,
                     user: data.user,
-                    actionType: data.actionType || 'kill', // Padrão 'kill' para logs antigos
-                    time: data.timestamp ? data.timestamp.toMillis() : Date.now()
+                    actionType: data.actionType || 'kill',
+                    time: data.timestamp ? data.timestamp.toMillis() : Date.now(),
+                    instanceId: data.instanceId // Garante que a instância esteja no log
                 });
             });
             renderActionLog();
         } catch (error) {
             console.error('Erro ao buscar histórico do Firestore:', error);
-            killLogList.innerHTML = '<li>Erro ao carregar histórico do Firebase.</li>';
+            actionLogList.innerHTML = '<li>Erro ao carregar histórico do Firebase.</li>';
         }
     }
 
@@ -175,16 +201,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
-            const killsCol = window.firebaseCollection(window.db, 'kills');
-            await window.firebaseAddDoc(killsCol, {
+            const actionsCol = window.firebaseCollection(window.db, 'actions'); // Usando nova coleção 'actions'
+            await window.firebaseAddDoc(actionsCol, {
                 itemName: actionData.itemName,
                 user: actionData.user,
                 itemId: actionData.itemId,
                 itemType: actionData.itemType,
-                actionType: actionData.actionType, // 'kill' ou 'collected'
+                actionType: actionData.actionType,
+                instanceId: currentInstanceId, // Adiciona a instância ao registro
                 timestamp: new Date()
             });
-            console.log(`Ação (${actionData.actionType}) registrada no Firestore com sucesso!`);
+            console.log(`Ação (${actionData.actionType}) registrada no Firestore para a instância ${currentInstanceId} com sucesso!`);
             await fetchActionLogFromFirestore();
         } catch (error) {
             console.error('Erro ao registrar ação no Firestore:', error);
@@ -201,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const renderItemCard = (item) => {
             const itemCard = document.createElement('div');
-            itemCard.classList.add('item-card', item.type); // Usando 'item-card' agora
+            itemCard.classList.add('item-card', item.type);
             itemCard.dataset.itemId = item.id;
 
             const itemState = itemStates[item.id];
@@ -248,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
         items.red.forEach(item => redBossListContainer.appendChild(renderItemCard(item)));
         items.yellow.forEach(item => yellowBossListContainer.appendChild(renderItemCard(item)));
         items.cyan.forEach(item => cyanBossListContainer.appendChild(renderItemCard(item)));
-        items.resource.forEach(item => resourceListContainer.appendChild(renderItemCard(item))); // Renderiza recursos
+        items.resource.forEach(item => resourceListContainer.appendChild(renderItemCard(item)));
 
         document.querySelectorAll('.action-button').forEach(button => {
             button.onclick = (event) => {
@@ -261,16 +288,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderActionLog() {
-        killLogList.innerHTML = '';
+        actionLogList.innerHTML = '';
         if (actionLog.length === 0) {
-            killLogList.innerHTML = '<li>Nenhum registro de ação ainda.</li>';
+            actionLogList.innerHTML = '<li>Nenhum registro de ação ainda.</li>';
             return;
         }
         actionLog.forEach(log => {
             const li = document.createElement('li');
             const verb = log.actionType === 'collected' ? 'coletado' : 'morto';
             li.innerHTML = `<strong>${log.itemName}</strong> ${verb} por <strong>${log.user || 'Desconhecido'}</strong> em ${formatDateTime(log.time)}`;
-            killLogList.appendChild(li);
+            actionLogList.appendChild(li);
         });
     }
 
@@ -302,42 +329,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    async function handleItemAction(itemId, actionType) {
-        let item = null;
-        const allItemsFlat = [...items.red, ...items.yellow, ...items.cyan, ...items.resource];
-        item = allItemsFlat.find(i => i.id === itemId);
-
-        if (!item) return;
-
-        const now = Date.now();
-        const nickname = nicknameInput.value.trim() || 'Anônimo';
-
-        if (item.type !== 'red') {
-            itemStates[item.id].lastActionTime = now;
-            itemStates[item.id].nextSpawnTime = now + item.respawnTime;
-            saveData();
-        }
-
-        const actionData = {
-            itemName: item.name,
-            user: nickname,
-            itemId: item.id,
-            itemType: item.type,
-            actionType: actionType
-        };
-        await sendItemActionToFirestore(actionData);
-
-        renderItemLists();
-        updateReservationStatus();
-    }
-
-    resetAllDataBtn.addEventListener('click', () => {
-        if (confirm('Tem certeza que deseja apagar TODOS os seus dados LOCAIS (timers, reservas)? O histórico de ações no Firebase não será afetado.')) {
-            localStorage.clear();
-            location.reload();
-        }
-    });
-
     // --- Loop de Atualização ---
     function updateUI() {
         renderItemLists();
@@ -349,5 +340,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateUI();
     setInterval(updateUI, 1000);
 
-    setInterval(fetchActionLogFromFirestore, 120000);
+    // Ajustado para 1 minuto para melhor resposta em multi-instância
+    setInterval(fetchActionLogFromFirestore, 60000); // Busca o histórico atualizado do Firebase a cada 1 minuto
 });
