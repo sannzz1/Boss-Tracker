@@ -10,7 +10,7 @@
 <body>
     <header>
         <h1>Boss Tracker</h1>
-        <p>Gerencie o respawn dos bosses do seu jogo.</p>
+        <p>Gerencie o respawn dos bosses e recursos do seu jogo.</p>
     </header>
 
     <main>
@@ -25,40 +25,30 @@
 
         <section class="boss-display-section">
             <h2>Bosses Vermelhos</h2>
-            <div id="redBossListContainer" class="boss-list">
+            <div id="redBossListContainer" class="item-list">
                 <!-- Bosses Vermelhos aqui -->
             </div>
 
             <h2>Bosses Amarelos</h2>
-            <div id="yellowBossListContainer" class="boss-list">
+            <div id="yellowBossListContainer" class="item-list">
                 <!-- Bosses Amarelos aqui -->
             </div>
 
             <h2>Bosses Azuis</h2>
-            <div id="cyanBossListContainer" class="boss-list">
+            <div id="cyanBossListContainer" class="item-list">
                 <!-- Bosses Azuis aqui -->
             </div>
-        </section>
 
-        <!-- NOVA SEÇÃO PARA RECURSOS LENDÁRIOS -->
-        <section class="legendary-resources-section">
             <h2>Recursos Lendários</h2>
-            <div class="resource-list">
-                <div class="resource-card">
-                    <h3>Minério Lendário ✨</h3>
-                    <p>Encontrado em cavernas profundas.</p>
-                </div>
-                <div class="resource-card">
-                    <h3>Planta Lendária 🌿</h3>
-                    <p>Cresce em locais sagrados e ocultos.</p>
-                </div>
+            <div id="resourceListContainer" class="item-list">
+                <!-- Recursos Lendários aqui -->
             </div>
         </section>
 
         <section class="log-section">
-            <h2>Histórico de Kills</h2>
+            <h2>Histórico de Ações</h2>
             <ul id="killLog">
-                <!-- Kills serão registrados aqui via JavaScript -->
+                <!-- Ações serão registradas aqui via JavaScript -->
             </ul>
         </section>
     </main>
