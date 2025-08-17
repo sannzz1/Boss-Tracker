@@ -3,24 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Boss Tracker - Seu Jogo Online</title>
+    <title>Boss Tracker - Pico 7F</title> <!-- Título da página específico para a instância -->
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
 </head>
-<body>
+<body data-instance-id="pico7f"> <!-- Identificador da instância para o JavaScript -->
     <header>
         <h1>Boss Tracker</h1>
-        <p>Gerencie o respawn dos bosses e recursos do seu jogo.</p>
+        <p>Gerencie o respawn de bosses e recursos do seu jogo por instância!</p>
     </header>
 
     <main>
+        <section class="instance-selector-section">
+            <h2>Selecionar Instância</h2>
+            <div class="instance-controls">
+                <select id="instanceSelector">
+                    <option value="pico7f" selected>Pico 7F</option>
+                    <option value="pico8f">Pico 8F</option>
+                    <option value="pico9f">Pico 9F</option>
+                    <option value="pico10f">Pico 10F</option>
+                </select>
+                <button id="goToInstanceBtn">Ir para Instância</button>
+            </div>
+        </section>
+
         <section class="user-section">
             <div class="user-info">
                 <input type="text" id="nicknameInput" placeholder="Seu Nickname" maxlength="20">
                 <button id="reserveEntryBtn">Reservar Entrada (30min)</button>
                 <div id="reservationStatus"></div>
             </div>
-            <button id="resetAllData" class="reset-button">Reiniciar Tudo (Cuidado!)</button>
+            <!-- Botão de Reiniciar Tudo foi removido -->
         </section>
 
         <section class="boss-display-section">
@@ -47,7 +60,7 @@
 
         <section class="log-section">
             <h2>Histórico de Ações</h2>
-            <ul id="killLog">
+            <ul id="actionLog">
                 <!-- Ações serão registradas aqui via JavaScript -->
             </ul>
         </section>
