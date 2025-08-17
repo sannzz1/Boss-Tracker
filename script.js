@@ -2,7 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Referências aos elementos HTML
     const redBossListContainer = document.getElementById('redBossListContainer');
     const yellowBossListContainer = document.getElementById('yellowBossListContainer');
-    const cyanBossListContainer = document.getElementById('cyanBossListContainer'); // Continua sendo cyan para a ID, mas exibirá "Azuis"
+    const cyanBossListContainer = document.getElementById('cyanBossListContainer');
+    const resourceListContainer = document.getElementById('resourceListContainer'); // Nova referência
     const killLogList = document.getElementById('killLog');
     const nicknameInput = document.getElementById('nicknameInput');
     const reserveEntryBtn = document.getElementById('reserveEntryBtn');
@@ -37,27 +38,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Dados dos Bosses - NOMES E ÍCONES ATUALIZADOS ---
-    const bosses = {
+    // --- Dados de TODOS os Itens (Bosses e Recursos) ---
+    const items = {
         red: [
-            { id: 'red-boss-1', name: 'Red Norte', type: 'red', dailySpawnTimes: ['04:00', '10:00', '16:00', '22:00'], icon: '��' },
+            { id: 'red-boss-1', name: 'Red Norte', type: 'red', dailySpawnTimes: ['04:00', '10:00', '16:00', '22:00'], icon: '👹' },
             { id: 'red-boss-2', name: 'Red Sul', type: 'red', dailySpawnTimes: ['01:00', '07:00', '13:00', '19:00'], icon: '🔱' },
         ],
         yellow: [
-            { id: 'yellow-boss-1', name: 'Amarelo Esquerdo', type: 'yellow', respawnTime: 60 * 60 * 1000, icon: '��' },
+            { id: 'yellow-boss-1', name: 'Amarelo Esquerdo', type: 'yellow', respawnTime: 60 * 60 * 1000, icon: '👺' },
             { id: 'yellow-boss-2', name: 'Amarelo Direito', type: 'yellow', respawnTime: 60 * 60 * 1000, icon: '🦁' },
         ],
-        cyan: [ // Mantenho 'cyan' como chave para consistência interna, mas os nomes serão 'Azul'
-            { id: 'cyan-boss-1', name: 'Azul 1', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '💧' }, // Ícone atualizado
-            { id: 'cyan-boss-2', name: 'Azul 2', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '🔵' }, // Ícone atualizado
-            { id: 'cyan-boss-3', name: 'Azul 3', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '❄️' }, // Ícone atualizado
-            { id: 'cyan-boss-4', name: 'Azul 4', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '��' } // NOVO BOSS AZUL
+        cyan: [
+            { id: 'cyan-boss-1', name: 'Azul 1', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '💧' },
+            { id: 'cyan-boss-2', name: 'Azul 2', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '🔵' },
+            { id: 'cyan-boss-3', name: 'Azul 3', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '❄️' },
+            { id: 'cyan-boss-4', name: 'Azul 4', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '🧊' }
+        ],
+        resource: [ // Novos recursos
+            { id: 'resource-ore', name: 'Minério Lendário', type: 'resource', respawnTime: 60 * 60 * 1000, icon: '✨' }, // 1 hora
+            { id: 'resource-plant', name: 'Planta Lendária', type: 'resource', respawnTime: 60 * 60 * 1000, icon: '🌿' }, // 1 hora
         ]
     };
 
-    let bossStates = {}; // Estado dos timers dos bosses (local no navegador)
-    let userReservation = { nickname: '', reservationUntil: null }; // Reserva do usuário (local no navegador)
-    let killLog = []; // Histórico de kills (será carregado do Firestore)
+    let itemStates = {}; // Estado dos timers para todos os itens
+    let userReservation = { nickname: '', reservationUntil: null };
+    let actionLog = []; // Histórico de ações (kills/coletas)
 
     // --- Funções de Utilitário ---
     function formatTime(ms) {
@@ -68,55 +73,55 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    // --- Persistência de Dados Locais (localStorage) ---
-    // Salva apenas os estados dos bosses e a reserva do usuário no navegador
-    function saveData() {
-        localStorage.setItem('bossTracker_bossStates', JSON.stringify(bossStates));
-        localStorage.setItem('bossTracker_userReservation', JSON.stringify(userReservation));
-        localStorage.setItem('bossTracker_lastNickname', nicknameInput.value);
-        // killLog NÃO é salvo localmente, ele é carregado do Firestore
+    function formatDateTime(timestamp) {
+        return new Date(timestamp).toLocaleString();
     }
 
-    // Carrega dados locais e o histórico do Firestore
+    // --- Persistência de Dados Locais (localStorage) ---
+    function saveData() {
+        localStorage.setItem('bossTracker_itemStates', JSON.stringify(itemStates));
+        localStorage.setItem('bossTracker_userReservation', JSON.stringify(userReservation));
+        localStorage.setItem('bossTracker_lastNickname', nicknameInput.value);
+    }
+
     async function loadData() {
-        const savedBossStates = localStorage.getItem('bossTracker_bossStates');
+        const savedItemStates = localStorage.getItem('bossTracker_itemStates');
         const savedUserReservation = localStorage.getItem('bossTracker_userReservation');
         const lastNickname = localStorage.getItem('bossTracker_lastNickname');
 
-        const allBosses = [...bosses.red, ...bosses.yellow, ...bosses.cyan];
+        const allItemsFlat = [...items.red, ...items.yellow, ...items.cyan, ...items.resource];
 
-        if (savedBossStates) {
-            bossStates = JSON.parse(savedBossStates);
-            // Garante que novos bosses sejam inicializados e bosses removidos sejam limpos
-            allBosses.forEach(boss => {
-                if (!bossStates[boss.id]) {
-                    if (boss.type === 'red') {
-                        bossStates[boss.id] = { lastKillTime: null, nextSpawnTime: calculateNextSpecificSpawnTime(boss.dailySpawnTimes) };
+        if (savedItemStates) {
+            itemStates = JSON.parse(savedItemStates);
+            allItemsFlat.forEach(item => {
+                if (!itemStates[item.id]) {
+                    if (item.type === 'red') {
+                        itemStates[item.id] = { lastActionTime: null, nextSpawnTime: calculateNextSpecificSpawnTime(item.dailySpawnTimes) };
                     } else {
-                        bossStates[boss.id] = { lastKillTime: null, nextSpawnTime: Date.now() };
+                        itemStates[item.id] = { lastActionTime: null, nextSpawnTime: Date.now() };
                     }
-                } else if (boss.type === 'red') {
-                    // Para bosses vermelhos, recalcular nextSpawnTime se já passou
-                    const currentNextSpawnTime = bossStates[boss.id].nextSpawnTime;
+                } else if (item.type === 'red') {
+                    // Para itens vermelhos, recalcular nextSpawnTime se já passou
+                    const currentNextSpawnTime = itemStates[item.id].nextSpawnTime;
                     const now = Date.now();
                     if (currentNextSpawnTime <= now) {
-                        bossStates[boss.id].nextSpawnTime = calculateNextSpecificSpawnTime(boss.dailySpawnTimes);
+                        itemStates[item.id].nextSpawnTime = calculateNextSpecificSpawnTime(item.dailySpawnTimes);
                     }
                 }
             });
-            // Remove bosses que não existem mais na lista 'bosses'
-            for (const id in bossStates) {
-                if (!allBosses.some(boss => boss.id === id)) {
-                    delete bossStates[id];
+            // Remove itens que não existem mais na lista 'items'
+            for (const id in itemStates) {
+                if (!allItemsFlat.some(item => item.id === id)) {
+                    delete itemStates[id];
                 }
             }
         } else {
-            // Inicializa todos os bosses pela primeira vez
-            allBosses.forEach(boss => {
-                if (boss.type === 'red') {
-                    bossStates[boss.id] = { lastKillTime: null, nextSpawnTime: calculateNextSpecificSpawnTime(boss.dailySpawnTimes) };
+            // Inicializa todos os itens pela primeira vez
+            allItemsFlat.forEach(item => {
+                if (item.type === 'red') {
+                    itemStates[item.id] = { lastActionTime: null, nextSpawnTime: calculateNextSpecificSpawnTime(item.dailySpawnTimes) };
                 } else {
-                    bossStates[boss.id] = { lastKillTime: null, nextSpawnTime: Date.now() };
+                    itemStates[item.id] = { lastActionTime: null, nextSpawnTime: Date.now() };
                 }
             });
         }
@@ -127,145 +132,144 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lastNickname) {
             nicknameInput.value = lastNickname;
         }
-        saveData(); // Salva os dados locais atualizados
+        saveData();
 
-        // Carrega o histórico de kills do Firestore
-        await fetchKillLogFromFirestore();
+        await fetchActionLogFromFirestore();
     }
 
     // --- Comunicação com Firebase Firestore ---
 
-    // Função para buscar o histórico de kills do Firestore
-    async function fetchKillLogFromFirestore() {
-        // Verifica se o Firebase foi inicializado (se o db existe)
+    async function fetchActionLogFromFirestore() {
         if (!window.db) {
-            console.error('ERRO: Firebase não inicializado. Verifique a configuração no index.html');
+            console.error('ERRO: Firebase não inicializado.');
             killLogList.innerHTML = '<li>Erro: Firebase não configurado.</li>';
             return;
         }
         try {
-            // Cria uma query para a coleção 'kills', ordenada por 'timestamp'
-            const killsCol = window.firebaseCollection(window.db, 'kills');
-            const q = window.firebaseQuery(killsCol, window.firebaseOrderBy('timestamp', 'desc')); // Ordena do mais novo para o mais antigo
+            const killsCol = window.firebaseCollection(window.db, 'kills'); // Mantendo a coleção 'kills'
+            const q = window.firebaseQuery(killsCol, window.firebaseOrderBy('timestamp', 'desc'));
 
             const querySnapshot = await window.firebaseGetDocs(q);
-            killLog = [];
+            actionLog = [];
             querySnapshot.forEach((doc) => {
-                // doc.data() é o documento em si
                 const data = doc.data();
-                killLog.push({
-                    bossId: data.bossId,
-                    bossName: data.bossName,
+                actionLog.push({
+                    itemId: data.itemId,
+                    itemName: data.itemName,
                     user: data.user,
-                    // Firestore armazena timestamps como objetos Timestamp, converta para milissegundos
+                    actionType: data.actionType || 'kill', // Padrão 'kill' para logs antigos
                     time: data.timestamp ? data.timestamp.toMillis() : Date.now()
                 });
             });
-            renderKillLog(); // Renderiza o log após carregar
+            renderActionLog();
         } catch (error) {
             console.error('Erro ao buscar histórico do Firestore:', error);
             killLogList.innerHTML = '<li>Erro ao carregar histórico do Firebase.</li>';
         }
     }
 
-    // Função para enviar uma nova kill para o Firestore
-    async function sendKillToFirestore(killData) {
+    async function sendItemActionToFirestore(actionData) {
         if (!window.db) {
-            console.error('ERRO: Firebase não inicializado. A kill não será registrada.');
-            alert('Erro: Firebase não configurado. A kill não será registrada centralmente.');
+            console.error('ERRO: Firebase não inicializado. A ação não será registrada.');
+            alert('Erro: Firebase não configurado. A ação não será registrada centralmente.');
             return;
         }
         try {
-            // Adiciona um novo documento à coleção 'kills'
             const killsCol = window.firebaseCollection(window.db, 'kills');
             await window.firebaseAddDoc(killsCol, {
-                bossName: killData.bossName,
-                user: killData.user,
-                bossId: killData.bossId,
-                bossType: killData.bossType,
-                timestamp: new Date() // Firestore salva automaticamente como seu tipo Timestamp
+                itemName: actionData.itemName,
+                user: actionData.user,
+                itemId: actionData.itemId,
+                itemType: actionData.itemType,
+                actionType: actionData.actionType, // 'kill' ou 'collected'
+                timestamp: new Date()
             });
-            console.log('Kill registrada no Firestore com sucesso!');
-            await fetchKillLogFromFirestore(); // Atualiza o log após o registro
+            console.log(`Ação (${actionData.actionType}) registrada no Firestore com sucesso!`);
+            await fetchActionLogFromFirestore();
         } catch (error) {
-            console.error('Erro ao registrar kill no Firestore:', error);
-            alert('Erro de conexão ao registrar kill no Firebase. Verifique sua internet ou console.');
+            console.error('Erro ao registrar ação no Firestore:', error);
+            alert('Erro de conexão ao registrar ação no Firebase. Verifique sua internet ou console.');
         }
     }
 
     // --- Renderização da UI ---
-    function renderBossLists() {
+    function renderItemLists() {
         redBossListContainer.innerHTML = '';
         yellowBossListContainer.innerHTML = '';
         cyanBossListContainer.innerHTML = '';
+        resourceListContainer.innerHTML = '';
 
-        const renderBossCard = (boss) => {
-            const bossCard = document.createElement('div');
-            bossCard.classList.add('boss-card', boss.type);
-            bossCard.dataset.bossId = boss.id;
+        const renderItemCard = (item) => {
+            const itemCard = document.createElement('div');
+            itemCard.classList.add('item-card', item.type); // Usando 'item-card' agora
+            itemCard.dataset.itemId = item.id;
 
-            const bossState = bossStates[boss.id];
+            const itemState = itemStates[item.id];
             const now = Date.now();
             let statusText = '';
-            let timeLeft = 0;
+            let nextSpawnDisplay = '';
+            let lastActionDisplay = '';
+            let buttonHtml = '';
 
-            if (boss.type === 'red') {
-                let currentNextSpawnTime = bossStates[boss.id].nextSpawnTime;
-
+            if (item.type === 'red') {
+                let currentNextSpawnTime = itemStates[item.id].nextSpawnTime;
                 if (currentNextSpawnTime <= now) {
                     statusText = 'Ativo';
-                    timeLeft = 0;
-
-                    const newNextSpawnTime = calculateNextSpecificSpawnTime(boss.dailySpawnTimes);
-                    if (newNextSpawnTime > now) {
-                        bossStates[boss.id].nextSpawnTime = newNextSpawnTime;
-                        saveData();
-                    }
+                    nextSpawnDisplay = `Próximo spawn fixo: ${formatDateTime(calculateNextSpecificSpawnTime(item.dailySpawnTimes))}`;
                 } else {
-                    timeLeft = currentNextSpawnTime - now;
-                    statusText = formatTime(timeLeft);
+                    const timeLeft = currentNextSpawnTime - now;
+                    statusText = `Ativo em: ${formatTime(timeLeft)}`;
+                    nextSpawnDisplay = `Próximo spawn fixo: ${formatDateTime(currentNextSpawnTime)}`;
                 }
-            } else { // Yellow or Cyan
-                if (!bossState || !bossState.lastKillTime || bossState.nextSpawnTime <= now) {
+            } else { // Yellow, Cyan, or Resource
+                if (!itemState || !itemState.lastActionTime || itemState.nextSpawnTime <= now) {
                     statusText = 'Ativo';
-                    timeLeft = 0;
+                    buttonHtml = `<button class="action-button ${item.type === 'resource' ? 'collect-button' : 'kill-button'}" data-item-id="${item.id}" data-action-type="${item.type === 'resource' ? 'collected' : 'kill'}">${item.type === 'resource' ? 'Coletado' : 'Matar'}</button>`;
                 } else {
-                    timeLeft = bossState.nextSpawnTime - now;
-                    statusText = `Respawn em: ${formatTime(timeLeft)}`;
+                    const timeLeft = itemState.nextSpawnTime - now;
+                    statusText = `${item.type === 'resource' ? 'Respawn' : 'Respawn'} em: ${formatTime(timeLeft)}`;
+                    buttonHtml = `<button class="action-button ${item.type === 'resource' ? 'collect-button' : 'kill-button'}" data-item-id="${item.id}" data-action-type="${item.type === 'resource' ? 'collected' : 'kill'}" disabled>${item.type === 'resource' ? 'Coletado' : 'Matar'}</button>`;
+                    lastActionDisplay = `Última ${item.type === 'resource' ? 'coleta' : 'morte'}: ${formatDateTime(itemState.lastActionTime)}`;
+                    nextSpawnDisplay = `Respawn estimado: ${formatDateTime(itemState.nextSpawnTime)}`;
                 }
             }
 
-            bossCard.innerHTML = `
-                <h3>${boss.name} ${boss.icon}</h3>
-                <p>Tipo: <span style="color: ${boss.type === 'red' ? 'red' : boss.type === 'yellow' ? 'gold' : 'cyan'};">${boss.type.toUpperCase()}</span></p>
+            itemCard.innerHTML = `
+                <h3>${item.name} ${item.icon}</h3>
+                <p>Tipo: <span style="color: ${item.type === 'red' ? 'red' : item.type === 'yellow' ? 'gold' : item.type === 'cyan' ? 'cyan' : 'purple'};">${item.type.toUpperCase()}</span></p>
                 <p class="status-text">${statusText}</p>
-                ${boss.type !== 'red' ? `<button class="kill-button" data-boss-id="${boss.id}">Matar</button>` : ''}
+                ${lastActionDisplay ? `<p class="action-time">${lastActionDisplay}</p>` : ''}
+                ${nextSpawnDisplay ? `<p class="action-time">${nextSpawnDisplay}</p>` : ''}
+                ${buttonHtml}
             `;
-            return bossCard;
+            return itemCard;
         };
 
-        bosses.red.forEach(boss => redBossListContainer.appendChild(renderBossCard(boss)));
-        bosses.yellow.forEach(boss => yellowBossListContainer.appendChild(renderBossCard(boss)));
-        bosses.cyan.forEach(boss => cyanBossListContainer.appendChild(renderBossCard(boss)));
+        items.red.forEach(item => redBossListContainer.appendChild(renderItemCard(item)));
+        items.yellow.forEach(item => yellowBossListContainer.appendChild(renderItemCard(item)));
+        items.cyan.forEach(item => cyanBossListContainer.appendChild(renderItemCard(item)));
+        items.resource.forEach(item => resourceListContainer.appendChild(renderItemCard(item))); // Renderiza recursos
 
-        document.querySelectorAll('.kill-button').forEach(button => {
+        document.querySelectorAll('.action-button').forEach(button => {
             button.onclick = (event) => {
                 event.stopPropagation();
-                handleBossKill(button.dataset.bossId);
+                const itemId = button.dataset.itemId;
+                const actionType = button.dataset.actionType;
+                handleItemAction(itemId, actionType);
             };
         });
     }
 
-    function renderKillLog() {
+    function renderActionLog() {
         killLogList.innerHTML = '';
-        if (killLog.length === 0) {
-            killLogList.innerHTML = '<li>Nenhum registro de kill ainda.</li>';
+        if (actionLog.length === 0) {
+            killLogList.innerHTML = '<li>Nenhum registro de ação ainda.</li>';
             return;
         }
-        // killLog já virá ordenado do mais novo para o mais antigo devido à query do Firestore
-        killLog.forEach(log => {
+        actionLog.forEach(log => {
             const li = document.createElement('li');
-            li.innerHTML = `<strong>${log.bossName}</strong> morto por <strong>${log.user || 'Desconhecido'}</strong> em ${new Date(log.time).toLocaleString()}`;
+            const verb = log.actionType === 'collected' ? 'coletado' : 'morto';
+            li.innerHTML = `<strong>${log.itemName}</strong> ${verb} por <strong>${log.user || 'Desconhecido'}</strong> em ${formatDateTime(log.time)}`;
             killLogList.appendChild(li);
         });
     }
@@ -298,56 +302,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    async function handleBossKill(bossId) {
-        let boss = null;
-        for (const type in bosses) {
-            boss = bosses[type].find(b => b.id === bossId);
-            if (boss) break;
-        }
-        if (!boss) return;
+    async function handleItemAction(itemId, actionType) {
+        let item = null;
+        const allItemsFlat = [...items.red, ...items.yellow, ...items.cyan, ...items.resource];
+        item = allItemsFlat.find(i => i.id === itemId);
+
+        if (!item) return;
 
         const now = Date.now();
         const nickname = nicknameInput.value.trim() || 'Anônimo';
 
-        if (boss.type !== 'red') {
-            bossStates[boss.id].lastKillTime = now;
-            bossStates[boss.id].nextSpawnTime = now + boss.respawnTime;
-            saveData(); // Salva o novo estado localmente
+        if (item.type !== 'red') {
+            itemStates[item.id].lastActionTime = now;
+            itemStates[item.id].nextSpawnTime = now + item.respawnTime;
+            saveData();
         }
 
-        // Envia a informação da kill para o Firestore
-        const killData = {
-            bossName: boss.name,
+        const actionData = {
+            itemName: item.name,
             user: nickname,
-            bossId: boss.id,
-            bossType: boss.type
+            itemId: item.id,
+            itemType: item.type,
+            actionType: actionType
         };
-        await sendKillToFirestore(killData); // Esta função já chamará fetchKillLogFromFirestore e renderKillLog após o sucesso.
+        await sendItemActionToFirestore(actionData);
 
-        // Atualiza apenas os elementos que dependem de estado local
-        renderBossLists();
+        renderItemLists();
         updateReservationStatus();
     }
 
     resetAllDataBtn.addEventListener('click', () => {
-        if (confirm('Tem certeza que deseja apagar TODOS os seus dados LOCAIS (timers, reservas)? O histórico de kills no Firebase não será afetado.')) {
+        if (confirm('Tem certeza que deseja apagar TODOS os seus dados LOCAIS (timers, reservas)? O histórico de ações no Firebase não será afetado.')) {
             localStorage.clear();
-            location.reload(); // Recarrega a página para resetar o estado
+            location.reload();
         }
     });
 
     // --- Loop de Atualização ---
     function updateUI() {
-        renderBossLists();
-        // renderKillLog() é chamado apenas após fetchKillLogFromFirestore
+        renderItemLists();
         updateReservationStatus();
     }
 
     // --- Inicialização ---
-    loadData(); // Carrega os dados locais e inicia o fetch do histórico
-    updateUI(); // Renderiza a UI inicialmente
-    setInterval(updateUI, 1000); // Atualiza os contadores a cada segundo
+    loadData();
+    updateUI();
+    setInterval(updateUI, 1000);
 
-    // A cada 2 minutos (120 segundos), busca o histórico atualizado do Firebase
-    setInterval(fetchKillLogFromFirestore, 120000);
+    setInterval(fetchActionLogFromFirestore, 120000);
 });
