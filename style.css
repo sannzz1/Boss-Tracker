@@ -43,17 +43,21 @@ main {
     main {
         grid-template-columns: 1fr 1fr; /* Duas colunas para telas médias e grandes */
     }
+    .instance-selector-section {
+        grid-column: 1 / 3; /* Ocupa as duas colunas no topo */
+        grid-row: 1 / 2;
+    }
     .user-section {
         grid-column: 1 / 2;
-        grid-row: 1 / 2;
+        grid-row: 2 / 3;
     }
     .boss-display-section {
         grid-column: 1 / 2; /* Bosses e recursos na primeira coluna */
-        grid-row: 2 / 3;
+        grid-row: 3 / 4; /* Puxa para baixo, após a seção de usuário */
     }
     .log-section {
         grid-column: 2 / 3; /* Ocupa a segunda coluna */
-        grid-row: 1 / 3; /* Ocupa as duas linhas da segunda coluna */
+        grid-row: 2 / 4; /* Ocupa as duas últimas linhas da segunda coluna */
     }
 }
 
@@ -70,6 +74,41 @@ h2 {
     padding-bottom: 10px;
     margin-top: 0;
 }
+
+/* Instance Selector Section */
+.instance-selector-section {
+    text-align: center;
+}
+.instance-controls {
+    display: flex;
+    flex-direction: column; /* Empilha em telas pequenas */
+    gap: 10px;
+    max-width: 400px; /* Limita largura do seletor */
+    margin: 0 auto; /* Centraliza o seletor */
+}
+@media (min-width: 480px) {
+    .instance-controls {
+        flex-direction: row; /* Alinha lado a lado em telas maiores */
+        justify-content: center;
+    }
+}
+
+#instanceSelector {
+    padding: 10px;
+    border: 1px solid #16a085;
+    border-radius: 5px;
+    background-color: #34495e;
+    color: #ecf0f1;
+    flex-grow: 1; /* Preenche o espaço disponível */
+}
+
+#goToInstanceBtn {
+    background-color: #f39c12; /* Laranja */
+}
+#goToInstanceBtn:hover {
+    background-color: #e67e22; /* Laranja mais escuro */
+}
+
 
 /* User Section */
 .user-info {
@@ -106,24 +145,15 @@ button {
     box-sizing: border-box;
 }
 
-button:hover:not([disabled]) { /* Hover apenas para botões não desabilitados */
+button:hover:not([disabled]) {
     background-color: #16a085;
 }
 
-button[disabled] { /* Estilo para botões desabilitados */
+button[disabled] {
     background-color: #555;
     cursor: not-allowed;
     opacity: 0.6;
 }
-
-.reset-button {
-    background-color: #e74c3c; /* Vermelho */
-    margin-top: 20px;
-}
-.reset-button:hover:not([disabled]) {
-    background-color: #c0392b;
-}
-
 
 #reservationStatus {
     margin-top: 10px;
@@ -144,11 +174,11 @@ button[disabled] { /* Estilo para botões desabilitados */
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
-    justify-content: center;
+    justify-content: center; /* Centraliza os cards */
     margin-bottom: 20px;
 }
 
-.item-card { /* Estilo base para todos os cards */
+.item-card {
     background-color: #34495e;
     border-radius: 8px;
     padding: 15px;
@@ -170,27 +200,26 @@ button[disabled] { /* Estilo para botões desabilitados */
 }
 
 /* Ajuste para telas grandes, permitindo mais cards por linha */
-@media (min-width: 768px) { /* Este é o ponto de quebra para o grid principal */
+@media (min-width: 768px) {
     .item-card {
         width: calc(50% - 7.5px); /* Ajuste para caber 2 por linha na coluna */
     }
 }
 
-@media (min-width: 992px) { /* Para telas ainda maiores, 3 cards por linha */
+@media (min-width: 992px) {
     .item-list {
-        justify-content: flex-start; /* Alinha à esquerda para mais de 2 cards */
+        justify-content: flex-start; /* Alinha à esquerda para mais de 2 cards quando há espaço */
     }
     .item-card {
         width: calc(33.33% - 10px); /* Aproximadamente um terço da largura */
     }
 }
 
-
 /* Cores das bordas dos cards */
 .item-card.red { border-left: 5px solid red; }
 .item-card.yellow { border-left: 5px solid gold; }
 .item-card.cyan { border-left: 5px solid cyan; }
-.item-card.resource { border-left: 5px solid #9b59b6; } /* Borda roxa para recursos */
+.item-card.resource { border-left: 5px solid #9b59b6; }
 
 .item-card h3 {
     margin-top: 0;
@@ -205,27 +234,26 @@ button[disabled] { /* Estilo para botões desabilitados */
 
 .item-card .status-text {
     font-weight: bold;
-    color: #f1c40f; /* Amarelo */
+    color: #f1c40f;
     font-size: 1.1em;
-    margin-bottom: 5px; /* Reduz margem para caber mais info */
+    margin-bottom: 5px;
 }
 
 .item-card .action-time {
-    font-size: 0.85em; /* Fonte menor para horários */
+    font-size: 0.85em;
     color: #bdc3c7;
     margin-top: 0;
     margin-bottom: 5px;
 }
 
-
 /* Botões de Ação */
-.action-button { /* Estilo geral para botões de kill/coleta */
-    background-color: #27ae60; /* Verde escuro */
+.action-button {
+    background-color: #27ae60;
     margin-top: 10px;
 }
 
-.action-button.collect-button { /* Botão de Coletado - cor levemente diferente */
-    background-color: #8e44ad; /* Roxo */
+.action-button.collect-button {
+    background-color: #8e44ad;
 }
 
 .action-button:hover:not([disabled]) {
@@ -233,12 +261,11 @@ button[disabled] { /* Estilo para botões desabilitados */
 }
 
 .action-button.collect-button:hover:not([disabled]) {
-    background-color: #79329c; /* Roxo mais escuro */
+    background-color: #79329c;
 }
 
-
 /* Log Section */
-#killLog { /* Renomeado semanticamente no JS, mas a ID HTML continua 'killLog' */
+#actionLog { /* ID do log atualizado */
     list-style: none;
     padding: 0;
     max-height: 500px;
@@ -248,17 +275,17 @@ button[disabled] { /* Estilo para botões desabilitados */
     background-color: #34495e;
 }
 
-#killLog li {
+#actionLog li {
     padding: 8px 15px;
     border-bottom: 1px dashed #4e6a87;
     font-size: 0.9em;
 }
 
-#killLog li:last-child {
+#actionLog li:last-child {
     border-bottom: none;
 }
 
-#killLog li strong {
+#actionLog li strong {
     color: #1abc9c;
 }
 
