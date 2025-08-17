@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Referências aos elementos HTML
     const redBossListContainer = document.getElementById('redBossListContainer');
     const yellowBossListContainer = document.getElementById('yellowBossListContainer');
-    const cyanBossListContainer = document.getElementById('cyanBossListContainer');
+    const cyanBossListContainer = document.getElementById('cyanBossListContainer'); // Continua sendo cyan para a ID, mas exibirá "Azuis"
     const killLogList = document.getElementById('killLog');
     const nicknameInput = document.getElementById('nicknameInput');
     const reserveEntryBtn = document.getElementById('reserveEntryBtn');
@@ -37,20 +37,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Dados dos Bosses ---
+    // --- Dados dos Bosses - NOMES E ÍCONES ATUALIZADOS ---
     const bosses = {
         red: [
-            { id: 'red-boss-1', name: 'Demonio do Fogo (Norte)', type: 'red', dailySpawnTimes: ['04:00', '10:00', '16:00', '22:00'], icon: '👹' },
-            { id: 'red-boss-2', name: 'Rei Carmesim (Sul)', type: 'red', dailySpawnTimes: ['01:00', '07:00', '13:00', '19:00'], icon: '🔱' },
+            { id: 'red-boss-1', name: 'Red Norte', type: 'red', dailySpawnTimes: ['04:00', '10:00', '16:00', '22:00'], icon: '��' },
+            { id: 'red-boss-2', name: 'Red Sul', type: 'red', dailySpawnTimes: ['01:00', '07:00', '13:00', '19:00'], icon: '🔱' },
         ],
         yellow: [
-            { id: 'yellow-boss-1', name: 'Guardião Dourado', type: 'yellow', respawnTime: 60 * 60 * 1000, icon: '👺' },
-            { id: 'yellow-boss-2', name: 'Lobo Alfa', type: 'yellow', respawnTime: 60 * 60 * 1000, icon: '🦁' },
+            { id: 'yellow-boss-1', name: 'Amarelo Esquerdo', type: 'yellow', respawnTime: 60 * 60 * 1000, icon: '��' },
+            { id: 'yellow-boss-2', name: 'Amarelo Direito', type: 'yellow', respawnTime: 60 * 60 * 1000, icon: '🦁' },
         ],
-        cyan: [
-            { id: 'cyan-boss-1', name: 'Espírito Ciano (Baixo-direita)', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '��' },
-            { id: 'cyan-boss-2', name: 'Guardião Ciano (Meio-esquerda)', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '' },
-            { id: 'cyan-boss-3', name: 'Protetor Ciano (Meio-superior)', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '��' }
+        cyan: [ // Mantenho 'cyan' como chave para consistência interna, mas os nomes serão 'Azul'
+            { id: 'cyan-boss-1', name: 'Azul 1', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '💧' }, // Ícone atualizado
+            { id: 'cyan-boss-2', name: 'Azul 2', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '🔵' }, // Ícone atualizado
+            { id: 'cyan-boss-3', name: 'Azul 3', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '❄️' }, // Ícone atualizado
+            { id: 'cyan-boss-4', name: 'Azul 4', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '��' } // NOVO BOSS AZUL
         ]
     };
 
@@ -86,6 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (savedBossStates) {
             bossStates = JSON.parse(savedBossStates);
+            // Garante que novos bosses sejam inicializados e bosses removidos sejam limpos
             allBosses.forEach(boss => {
                 if (!bossStates[boss.id]) {
                     if (boss.type === 'red') {
@@ -94,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         bossStates[boss.id] = { lastKillTime: null, nextSpawnTime: Date.now() };
                     }
                 } else if (boss.type === 'red') {
+                    // Para bosses vermelhos, recalcular nextSpawnTime se já passou
                     const currentNextSpawnTime = bossStates[boss.id].nextSpawnTime;
                     const now = Date.now();
                     if (currentNextSpawnTime <= now) {
@@ -101,12 +104,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
+            // Remove bosses que não existem mais na lista 'bosses'
             for (const id in bossStates) {
                 if (!allBosses.some(boss => boss.id === id)) {
                     delete bossStates[id];
                 }
             }
         } else {
+            // Inicializa todos os bosses pela primeira vez
             allBosses.forEach(boss => {
                 if (boss.type === 'red') {
                     bossStates[boss.id] = { lastKillTime: null, nextSpawnTime: calculateNextSpecificSpawnTime(boss.dailySpawnTimes) };
@@ -125,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveData(); // Salva os dados locais atualizados
 
         // Carrega o histórico de kills do Firestore
-        await fetchKillLogFromFirestore(); 
+        await fetchKillLogFromFirestore();
     }
 
     // --- Comunicação com Firebase Firestore ---
@@ -153,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     bossName: data.bossName,
                     user: data.user,
                     // Firestore armazena timestamps como objetos Timestamp, converta para milissegundos
-                    time: data.timestamp ? data.timestamp.toMillis() : Date.now() 
+                    time: data.timestamp ? data.timestamp.toMillis() : Date.now()
                 });
             });
             renderKillLog(); // Renderiza o log após carregar
@@ -344,5 +349,5 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateUI, 1000); // Atualiza os contadores a cada segundo
 
     // A cada 2 minutos (120 segundos), busca o histórico atualizado do Firebase
-    setInterval(fetchKillLogFromFirestore, 120000); 
+    setInterval(fetchKillLogFromFirestore, 120000);
 });
