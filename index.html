@@ -16,15 +16,12 @@
     <main>
         <section class="instance-selector-section">
             <h2>Selecionar Instância</h2>
-            <div class="instance-controls">
-                <select id="instanceSelector">
-                    <option value="pico7f" selected>Pico 7F</option>
-                    <option value="pico8f">Pico 8F</option>
-                    <option value="pico9f">Pico 9F</option>
-                    <option value="pico10f">Pico 10F</option>
-                </select>
-                <button id="goToInstanceBtn">Ir para Instância</button>
-            </div>
+            <nav class="instance-nav">
+                <a href="index.html" class="nav-button active">Pico 7F</a>
+                <a href="pico8f.html" class="nav-button">Pico 8F</a>
+                <a href="pico9f.html" class="nav-button">Pico 9F</a>
+                <a href="pico10f.html" class="nav-button">Pico 10F</a>
+            </nav>
         </section>
 
         <section class="user-section">
@@ -85,22 +82,23 @@
       };
       // --------------------------------------------------------------------------
 
-      // Importe as funções necessárias dos SDKs do Firebase (use a versão mais recente que o Firebase te der)
+      // Importe as funções necessárias dos SDKs do Firebase (CORREÇÃO AQUI)
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-      import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+      // Onde 'where as firebaseWhere' está na importação e no window.firebaseWhere
+      import { getFirestore, collection, addDoc, getDocs, query, orderBy, where as firebaseWhere } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
       // Inicialize o Firebase
       const app = initializeApp(firebaseConfig);
       const db = getFirestore(app);
 
       // Torne 'db' e as funções do Firestore acessíveis globalmente
-      // Isso é necessário porque script.js não é um módulo e precisa acessá-los.
       window.db = db;
       window.firebaseCollection = collection;
       window.firebaseAddDoc = addDoc;
       window.firebaseGetDocs = getDocs;
       window.firebaseQuery = query;
       window.firebaseOrderBy = orderBy;
+      window.firebaseWhere = firebaseWhere; // CORREÇÃO AQUI
     </script>
     <!-- FIM: Scripts do Firebase -->
 
