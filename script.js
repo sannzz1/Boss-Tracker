@@ -1,31 +1,25 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- Nova funcionalidade: Gerenciamento de Instâncias ---
     const currentInstanceId = document.body.dataset.instanceId || 'pico7f'; // Pega o ID da instância do HTML
-    const instanceSelector = document.getElementById('instanceSelector');
-    const goToInstanceBtn = document.getElementById('goToInstanceBtn');
-    const actionLogList = document.getElementById('actionLog'); // ID do log agora é actionLog
 
-    // Define o seletor para a instância atual
-    if (instanceSelector) {
-        instanceSelector.value = currentInstanceId;
-        goToInstanceBtn.addEventListener('click', () => {
-            const selectedInstance = instanceSelector.value;
-            if (selectedInstance !== currentInstanceId) {
-                // Redireciona para o arquivo HTML correspondente
-                window.location.href = `${selectedInstance}.html`;
-            }
-        });
-    }
+    // Adiciona classe 'active' ao botão de navegação da instância atual
+    document.querySelectorAll('.nav-button').forEach(button => {
+        if (button.href.includes(currentInstanceId)) {
+            button.classList.add('active');
+        } else {
+            button.classList.remove('active');
+        }
+    });
 
-    // Referências aos elementos HTML (restante)
+    // Referências aos elementos HTML
     const redBossListContainer = document.getElementById('redBossListContainer');
     const yellowBossListContainer = document.getElementById('yellowBossListContainer');
     const cyanBossListContainer = document.getElementById('cyanBossListContainer');
     const resourceListContainer = document.getElementById('resourceListContainer');
+    const actionLogList = document.getElementById('actionLog'); // ID do log
     const nicknameInput = document.getElementById('nicknameInput');
     const reserveEntryBtn = document.getElementById('reserveEntryBtn');
     const reservationStatus = document.getElementById('reservationStatus');
-    // Botão de Reiniciar Tudo foi removido
 
     // --- Função: Calcula o próximo horário de spawn fixo para bosses vermelhos ---
     function calculateNextSpecificSpawnTime(dailySpawnTimes) {
@@ -67,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ],
         cyan: [
             { id: 'cyan-boss-1', name: 'Azul 1', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '💧' },
-            { id: 'cyan-boss-2', name: 'Azul 2', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '��' },
+            { id: 'cyan-boss-2', name: 'Azul 2', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '🔵' },
             { id: 'cyan-boss-3', name: 'Azul 3', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '❄️' },
             { id: 'cyan-boss-4', name: 'Azul 4', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '🧊' }
         ],
@@ -166,10 +160,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
-            const killsCol = window.firebaseCollection(window.db, 'actions'); // Usando nova coleção 'actions'
+            const actionsCol = window.firebaseCollection(window.db, 'actions'); // Usando nova coleção 'actions'
             // Filtra o log pela instância atual
             const q = window.firebaseQuery(
-                killsCol,
+                actionsCol,
                 window.firebaseWhere('instanceId', '==', currentInstanceId), // Filtra por instância
                 window.firebaseOrderBy('timestamp', 'desc')
             );
@@ -184,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     user: data.user,
                     actionType: data.actionType || 'kill',
                     time: data.timestamp ? data.timestamp.toMillis() : Date.now(),
-                    instanceId: data.instanceId // Garante que a instância esteja no log
+                    instanceId: data.instanceId
                 });
             });
             renderActionLog();
@@ -201,14 +195,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
-            const actionsCol = window.firebaseCollection(window.db, 'actions'); // Usando nova coleção 'actions'
+            const actionsCol = window.firebaseCollection(window.db, 'actions');
             await window.firebaseAddDoc(actionsCol, {
                 itemName: actionData.itemName,
                 user: actionData.user,
                 itemId: actionData.itemId,
                 itemType: actionData.itemType,
                 actionType: actionData.actionType,
-                instanceId: currentInstanceId, // Adiciona a instância ao registro
+                instanceId: currentInstanceId,
                 timestamp: new Date()
             });
             console.log(`Ação (${actionData.actionType}) registrada no Firestore para a instância ${currentInstanceId} com sucesso!`);
@@ -328,6 +322,37 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Por favor, digite seu nickname para reservar.');
         }
     });
+
+    // Função handleItemAction movida para dentro do DOMContentLoaded
+    async function handleItemAction(itemId, actionType) {
+        let item = null;
+        const allItemsFlat = [...items.red, ...items.yellow, ...items.cyan, ...items.resource];
+        item = allItemsFlat.find(i => i.id === itemId);
+
+        if (!item) return;
+
+        const now = Date.now();
+        const nickname = nicknameInput.value.trim() || 'Anônimo';
+
+        if (item.type !== 'red') {
+            itemStates[item.id].lastActionTime = now;
+            itemStates[item.id].nextSpawnTime = now + item.respawnTime;
+            saveData();
+        }
+
+        const actionData = {
+            itemName: item.name,
+            user: nickname,
+            itemId: item.id,
+            itemType: item.type,
+            actionType: actionType
+        };
+        await sendItemActionToFirestore(actionData);
+
+        renderItemLists();
+        updateReservationStatus();
+    }
+
 
     // --- Loop de Atualização ---
     function updateUI() {
