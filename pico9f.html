@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boss Tracker - Pico 7F</title> <!-- Título da página específico para a instância -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
+</head>
+<body data-instance-id="pico7f"> <!-- Identificador da instância para o JavaScript -->
+    <header>
+        <h1>Boss Tracker</h1>
+        <p>Gerencie o respawn de bosses e recursos do seu jogo por instância!</p>
+    </header>
+
+    <main>
+        <section class="instance-selector-section">
+            <h2>Selecionar Instância</h2>
+            <div class="instance-controls">
+                <select id="instanceSelector">
+                    <option value="pico7f" selected>Pico 7F</option>
+                    <option value="pico8f">Pico 8F</option>
+                    <option value="pico9f">Pico 9F</option>
+                    <option value="pico10f">Pico 10F</option>
+                </select>
+                <button id="goToInstanceBtn">Ir para Instância</button>
+            </div>
+        </section>
+
+        <section class="user-section">
+            <div class="user-info">
+                <input type="text" id="nicknameInput" placeholder="Seu Nickname" maxlength="20">
+                <button id="reserveEntryBtn">Reservar Entrada (30min)</button>
+                <div id="reservationStatus"></div>
+            </div>
+            <!-- Botão de Reiniciar Tudo foi removido -->
+        </section>
+
+        <section class="boss-display-section">
+            <h2>Bosses Vermelhos</h2>
+            <div id="redBossListContainer" class="item-list">
+                <!-- Bosses Vermelhos aqui -->
+            </div>
+
+            <h2>Bosses Amarelos</h2>
+            <div id="yellowBossListContainer" class="item-list">
+                <!-- Bosses Amarelos aqui -->
+            </div>
+
+            <h2>Bosses Azuis</h2>
+            <div id="cyanBossListContainer" class="item-list">
+                <!-- Bosses Azuis aqui -->
+            </div>
+
+            <h2>Recursos Lendários</h2>
+            <div id="resourceListContainer" class="item-list">
+                <!-- Recursos Lendários aqui -->
+            </div>
+        </section>
+
+        <section class="log-section">
+            <h2>Histórico de Ações</h2>
+            <ul id="actionLog">
+                <!-- Ações serão registradas aqui via JavaScript -->
+            </ul>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 Boss Tracker. Desenvolvido para jogadores.</p>
+    </footer>
+
+    <!-- INÍCIO: Scripts do Firebase -->
+    <script type="module">
+      // SEU SNIPPET DE CONFIGURAÇÃO DO FIREBASE VAI AQUI (const firebaseConfig = {...})
+      // Exemplo (APENAS PARA ILUSTRAR, NÃO COPIE ESTE):
+      const firebaseConfig = {
+          apiKey: "AIzaSyBVPxlLXmJrK9VdpdCF607dhUFwwap14VI",
+          authDomain: "boss-tracker-d7533.firebaseapp.com",
+          projectId: "boss-tracker-d7533",
+          storageBucket: "boss-tracker-d7533.firebasestorage.app",
+          messagingSenderId: "876688873315",
+          appId: "1:876688873315:web:e939ad2290b6ea3726e556",
+          measurementId: "G-6X54B5LSJ7"
+      };
+      // --------------------------------------------------------------------------
+
+      // Importe as funções necessárias dos SDKs do Firebase (use a versão mais recente que o Firebase te der)
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+      import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+      // Inicialize o Firebase
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+
+      // Torne 'db' e as funções do Firestore acessíveis globalmente
+      // Isso é necessário porque script.js não é um módulo e precisa acessá-los.
+      window.db = db;
+      window.firebaseCollection = collection;
+      window.firebaseAddDoc = addDoc;
+      window.firebaseGetDocs = getDocs;
+      window.firebaseQuery = query;
+      window.firebaseOrderBy = orderBy;
+    </script>
+    <!-- FIM: Scripts do Firebase -->
+
+    <script src="script.js"></script>
+</body>
+</html>
