@@ -75,40 +75,46 @@ h2 {
     margin-top: 0;
 }
 
-/* Instance Selector Section */
+/* Instance Selector Section (Botões de Navegação) */
 .instance-selector-section {
     text-align: center;
 }
-.instance-controls {
+.instance-nav {
     display: flex;
-    flex-direction: column; /* Empilha em telas pequenas */
+    flex-wrap: wrap; /* Permite que os botões quebrem linha */
+    justify-content: center; /* Centraliza os botões */
     gap: 10px;
-    max-width: 400px; /* Limita largura do seletor */
-    margin: 0 auto; /* Centraliza o seletor */
-}
-@media (min-width: 480px) {
-    .instance-controls {
-        flex-direction: row; /* Alinha lado a lado em telas maiores */
-        justify-content: center;
-    }
+    margin-top: 15px;
 }
 
-#instanceSelector {
-    padding: 10px;
-    border: 1px solid #16a085;
+.nav-button {
+    display: block; /* Para que margin e padding funcionem como bloco */
+    padding: 10px 15px;
+    border: none;
     border-radius: 5px;
-    background-color: #34495e;
-    color: #ecf0f1;
-    flex-grow: 1; /* Preenche o espaço disponível */
-}
-
-#goToInstanceBtn {
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
     background-color: #f39c12; /* Laranja */
-}
-#goToInstanceBtn:hover {
-    background-color: #e67e22; /* Laranja mais escuro */
+    color: white;
+    font-weight: bold;
+    text-decoration: none; /* Remove sublinhado padrão do link */
+    flex-grow: 1; /* Permite que cresçam para preencher espaço */
+    max-width: 150px; /* Limita largura máxima para botões individuais */
+    text-align: center;
+    box-sizing: border-box; /* Inclui padding e border no cálculo da largura */
 }
 
+.nav-button:hover {
+    background-color: #e67e22; /* Laranja mais escuro */
+    transform: translateY(-2px); /* Efeito de elevação sutil */
+}
+
+.nav-button.active {
+    background-color: #d35400; /* Laranja ainda mais escuro para o ativo */
+    border: 2px solid #e67e22; /* Borda para destaque */
+    cursor: default; /* Não indica que é clicável novamente */
+    transform: none; /* Remove elevação se ativo */
+}
 
 /* User Section */
 .user-info {
@@ -265,7 +271,7 @@ button[disabled] {
 }
 
 /* Log Section */
-#actionLog { /* ID do log atualizado */
+#actionLog {
     list-style: none;
     padding: 0;
     max-height: 500px;
