@@ -1,11 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- Nova funcionalidade: Gerenciamento de Instâncias ---
     const currentInstanceId = document.body.dataset.instanceId || 'pico7f';
-    console.log(`[DEBUG] Página carregada para a instância: ${currentInstanceId}`);
+    console.log(`%c[APP START] Carregando aplicação para a instância: ${currentInstanceId}`, 'color: #1abc9c; font-weight: bold;');
 
     // Adiciona classe 'active' ao botão de navegação da instância atual
     document.querySelectorAll('.nav-button').forEach(button => {
-        if (button.href.includes(currentInstanceId) || (currentInstanceId === 'pico7f' && button.href.endsWith('index.html'))) {
+        // Correção para index.html / pico7f.html para que o botão 'Pico 7F' seja ativo quando o arquivo for index.html
+        const isCurrentFileIndex = window.location.pathname.endsWith('index.html') || window.location.pathname === '/';
+        const isButtonForCurrentInstance = (button.href.includes(currentInstanceId)) || (currentInstanceId === 'pico7f' && isCurrentFileIndex && button.href.endsWith('index.html'));
+
+        if (isButtonForCurrentInstance) {
             button.classList.add('active');
         } else {
             button.classList.remove('active');
@@ -51,6 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Dados de TODOS os Itens (Bosses e Recursos) ---
+    // ESTA LISTA É A DEFINIÇÃO DOS BOSSES, É GLOBAL E COMPARTILHADA POR TODAS AS INSTÂNCIAS.
+    // APENAS SEUS ESTADOS (timers, quem matou) SÃO INDIVIDUAIS POR INSTÂNCIA.
     const items = {
         red: [
             { id: 'red-boss-1', name: 'Red Norte', type: 'red', dailySpawnTimes: ['04:00', '10:00', '16:00', '22:00'], icon: '👹' },
@@ -98,9 +104,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (savedUserReservation) {
             userReservation = JSON.parse(savedUserReservation);
+            console.log(`%c[LOCAL] Reserva local para ${currentInstanceId} carregada:`, 'color: #9b59b6;', userReservation);
         }
         if (lastNickname) {
             nicknameInput.value = lastNickname;
+            console.log(`%c[LOCAL] Nickname local carregado: ${lastNickname}`, 'color: #9b59b6;');
         }
         // Salva para garantir que qualquer inicialização ou ajuste local seja persistido
         saveLocalData();
@@ -110,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveLocalData() {
         localStorage.setItem(`bossTracker_${currentInstanceId}_userReservation`, JSON.stringify(userReservation));
         localStorage.setItem(`bossTracker_lastNickname`, nicknameInput.value);
+        console.log(`%c[LOCAL] Dados locais salvos para instância: ${currentInstanceId}`, 'color: #9b59b6;');
     }
 
     // Função para inicializar os estados dos itens para uma nova instância no Firestore
@@ -132,10 +141,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             await window.firebaseSetDoc(instanceRef, initialStates);
-            console.log(`[DEBUG] Estados iniciais da instância ${currentInstanceId} criados no Firestore.`);
+            console.log(`%c[DB INIT] Estados iniciais da instância ${currentInstanceId} CRIADOS no Firestore.`, 'color: #f39c12;');
             return initialStates;
         } catch (error) {
-            console.error(`Erro ao criar estados iniciais da instância ${currentInstanceId} no Firestore:`, error);
+            console.error(`%c[DB INIT ERROR] Erro ao criar estados iniciais da instância ${currentInstanceId} no Firestore:`, 'color: #e74c3c;', error);
             return null; // Indica falha
         }
     }
@@ -150,15 +159,15 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const docSnap = await window.firebaseGetDoc(instanceRef);
             if (docSnap.exists()) {
-                console.log(`[DEBUG] Estados da instância ${currentInstanceId} carregados do Firestore.`);
-                return docSnap.data();
+                const loadedStates = docSnap.data();
+                console.log(`%c[DB LOAD] Estados da instância ${currentInstanceId} CARREGADOS do Firestore:`, 'color: #2ecc71;', loadedStates);
+                return loadedStates;
             } else {
-                console.log(`[DEBUG] Documento da instância ${currentInstanceId} não encontrado no Firestore. Inicializando.`);
+                console.log(`%c[DB LOAD] Documento da instância ${currentInstanceId} NÃO ENCONTRADO no Firestore. Inicializando.`, 'color: #f1c40f;');
                 return await initializeInstanceStatesInFirestore();
             }
         } catch (error) {
-            console.error(`Erro ao carregar estados da instância ${currentInstanceId} do Firestore:`, error);
-            // Em caso de erro, inicializa localmente como fallback (se necessário, ou trata erro de forma mais robusta)
+            console.error(`%c[DB LOAD ERROR] Erro ao carregar estados da instância ${currentInstanceId} do Firestore:`, 'color: #e74c3c;', error);
             return null; 
         }
     }
@@ -171,16 +180,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const instanceRef = window.firebaseDoc(window.db, 'instanceStates', currentInstanceId);
         try {
-            // Usa updateDoc para atualizar apenas o campo específico dentro do documento da instância
             await window.firebaseUpdateDoc(instanceRef, {
-                [itemId]: newState // Ex: { "red-boss-1": { lastActionTime: ..., nextSpawnTime: ... } }
+                [itemId]: newState
             });
-            console.log(`[DEBUG] Estado do item ${itemId} atualizado no Firestore para instância ${currentInstanceId}.`);
+            console.log(`%c[DB UPDATE] Estado do item ${itemId} ATUALIZADO no Firestore para instância ${currentInstanceId}. Novo estado:`, 'color: #3498db;', newState);
         } catch (error) {
-            console.error(`Erro ao atualizar estado do item ${itemId} no Firestore:`, error);
+            console.error(`%c[DB UPDATE ERROR] Erro ao atualizar estado do item ${itemId} no Firestore:`, 'color: #e74c3c;', error);
         }
     }
-
 
     async function fetchActionLogFromFirestore() {
         if (!window.db) {
@@ -189,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
-            console.log(`[DEBUG] Buscando ações para a instância: ${currentInstanceId}`);
+            console.log(`%c[LOG FETCH] Buscando ações para a instância: ${currentInstanceId} no Firestore.`, 'color: #8e44ad;');
             const actionsCol = window.firebaseCollection(window.db, 'actions');
             const q = window.firebaseQuery(
                 actionsCol,
@@ -200,11 +207,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const querySnapshot = await window.firebaseGetDocs(q);
             actionLog = [];
             if (querySnapshot.empty) {
-                console.log(`[DEBUG] Nenhuma ação encontrada no Firestore para a instância: ${currentInstanceId}`);
+                console.log(`%c[LOG FETCH] Nenhuma ação encontrada no Firestore para a instância: ${currentInstanceId}.`, 'color: #8e44ad;');
             }
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                console.log(`[DEBUG] Ação carregada do Firestore: ${data.itemName} (Instância: ${data.instanceId}, Usuário: ${data.user})`);
                 actionLog.push({
                     itemId: data.itemId,
                     itemName: data.itemName,
@@ -214,9 +220,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     instanceId: data.instanceId
                 });
             });
+            console.log(`%c[LOG FETCH] ${actionLog.length} ações carregadas para a instância ${currentInstanceId}.`, 'color: #8e44ad;');
             renderActionLog();
         } catch (error) {
-            console.error('Erro ao buscar histórico do Firestore:', error);
+            console.error(`%c[LOG FETCH ERROR] Erro ao buscar histórico do Firestore:`, 'color: #e74c3c;', error);
             actionLogList.innerHTML = '<li>Erro ao carregar histórico do Firebase.</li>';
         }
     }
@@ -238,10 +245,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 instanceId: currentInstanceId,
                 timestamp: new Date()
             });
-            console.log(`[DEBUG] Ação (${actionData.actionType}) registrada no Firestore para a instância ${currentInstanceId} com sucesso!`);
-            await fetchActionLogFromFirestore();
+            console.log(`%c[LOG SEND] Ação (${actionData.actionType}) registrada no Firestore para a instância ${currentInstanceId} com sucesso!`, 'color: #27ae60;');
+            await fetchActionLogFromFirestore(); // Re-busca e re-renderiza o log após o registro
         } catch (error) {
-            console.error('Erro ao registrar ação no Firestore:', error);
+            console.error(`%c[LOG SEND ERROR] Erro ao registrar ação no Firestore:`, 'color: #e74c3c;', error);
             alert('Erro de conexão ao registrar ação no Firebase. Verifique sua internet ou console.');
         }
     }
@@ -258,15 +265,31 @@ document.addEventListener('DOMContentLoaded', () => {
             itemCard.classList.add('item-card', item.type);
             itemCard.dataset.itemId = item.id;
 
-            const itemState = itemStates[item.id]; // Agora 'itemStates' vem do Firestore
+            // Pega o estado do item do objeto itemStates carregado do Firestore
+            const itemState = itemStates[item.id]; 
             const now = Date.now();
             let statusText = '';
             let nextSpawnDisplay = '';
             let lastActionDisplay = '';
             let buttonHtml = '';
 
+            // Lógica para boss vermelho (spawn fixo)
             if (item.type === 'red') {
-                let currentNextSpawnTime = itemState ? itemState.nextSpawnTime : calculateNextSpecificSpawnTime(item.dailySpawnTimes);
+                // Se não há estado salvo ou o tempo de spawn passou, recalcula
+                let currentNextSpawnTime = itemState && itemState.nextSpawnTime > now ?
+                                          itemState.nextSpawnTime : calculateNextSpecificSpawnTime(item.dailySpawnTimes);
+                
+                // Força o itemState a refletir o tempo de spawn atual na UI
+                // Apenas se o estado carregado for diferente ou não existir
+                if (!itemState || itemState.nextSpawnTime !== currentNextSpawnTime) {
+                    itemStates[item.id] = { 
+                        lastActionTime: itemState ? itemState.lastActionTime : null, 
+                        nextSpawnTime: currentNextSpawnTime 
+                    };
+                    // Não salva no Firestore aqui para evitar loop infinito,
+                    // a atualização do Firestore ocorre apenas no handleItemAction
+                }
+
                 if (currentNextSpawnTime <= now) {
                     statusText = 'Ativo';
                     nextSpawnDisplay = `Próximo spawn fixo: ${formatDateTime(calculateNextSpecificSpawnTime(item.dailySpawnTimes))}`;
@@ -275,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     statusText = `Ativo em: ${formatTime(timeLeft)}`;
                     nextSpawnDisplay = `Próximo spawn fixo: ${formatDateTime(currentNextSpawnTime)}`;
                 }
-            } else { // Yellow, Cyan, or Resource
+            } else { // Yellow, Cyan, or Resource (spawn baseado na última morte/coleta)
                 if (!itemState || !itemState.lastActionTime || itemState.nextSpawnTime <= now) {
                     statusText = 'Ativo';
                     buttonHtml = `<button class="action-button ${item.type === 'resource' ? 'collect-button' : 'kill-button'}" data-item-id="${item.id}" data-action-type="${item.type === 'resource' ? 'collected' : 'kill'}">${item.type === 'resource' ? 'Coletado' : 'Matar'}</button>`;
@@ -298,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             return itemCard;
         };
-
+        console.log(`%c[UI RENDER] Renderizando cards para a instância: ${currentInstanceId}. Estados usados:`, 'color: #1abc9c;', itemStates);
         items.red.forEach(item => redBossListContainer.appendChild(renderItemCard(item)));
         items.yellow.forEach(item => yellowBossListContainer.appendChild(renderItemCard(item)));
         items.cyan.forEach(item => cyanBossListContainer.appendChild(renderItemCard(item)));
@@ -316,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderActionLog() {
         actionLogList.innerHTML = '';
-        console.log(`[DEBUG] Renderizando log para a instância: ${currentInstanceId}. Itens no log: ${actionLog.length}`);
+        console.log(`%c[LOG RENDER] Renderizando log para a instância: ${currentInstanceId}. Itens no log: ${actionLog.length}`, 'color: #8e44ad;');
         if (actionLog.length === 0) {
             actionLogList.innerHTML = '<li>Nenhum registro de ação para esta instância ainda.</li>';
             return;
@@ -340,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
             userReservation.reservationUntil = null;
             reservationStatus.textContent = 'Nenhuma reserva ativa.';
             reservationStatus.style.color = '#bdc3c7';
-            saveLocalData(); // Salva estado local da reserva
+            saveLocalData();
         }
     }
 
@@ -350,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (nickname) {
             userReservation.nickname = nickname;
             userReservation.reservationUntil = Date.now() + (30 * 60 * 1000);
-            saveLocalData(); // Salva estado local da reserva
+            saveLocalData();
             updateReservationStatus();
         } else {
             alert('Por favor, digite seu nickname para reservar.');
@@ -367,16 +390,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = Date.now();
         const nickname = nicknameInput.value.trim() || 'Anônimo';
 
-        // Atualiza o estado do item localmente
+        let newItemState;
         if (item.type !== 'red') {
-            itemStates[item.id] = { lastActionTime: now, nextSpawnTime: now + item.respawnTime };
+            newItemState = { lastActionTime: now, nextSpawnTime: now + item.respawnTime };
         } else {
-            // Para bosses vermelhos, só registra a ação, o nextSpawnTime é fixo e recalculado
-            itemStates[item.id] = { lastActionTime: now, nextSpawnTime: calculateNextSpecificSpawnTime(item.dailySpawnTimes) };
+            // Para bosses vermelhos, o tempo de spawn é fixo, não baseado na 'morte'
+            newItemState = { lastActionTime: now, nextSpawnTime: calculateNextSpecificSpawnTime(item.dailySpawnTimes) };
         }
+        
+        // Atualiza o objeto itemStates local ANTES de enviar para o Firestore
+        // Isso garante que a UI reflita a mudança imediatamente, mesmo antes da atualização do Firestore
+        itemStates[item.id] = newItemState;
+        console.log(`%c[ACTION] Item ${itemId} acionado. Novo estado local:`, 'color: #27ae60;', newItemState);
+
 
         // Envia o novo estado do item para o Firestore
-        await updateItemStateInFirestore(item.id, itemStates[item.id]);
+        await updateItemStateInFirestore(item.id, newItemState);
 
         // Envia a ação (kill/coleta) para o Firestore Actions Log
         const actionData = {
@@ -386,9 +415,9 @@ document.addEventListener('DOMContentLoaded', () => {
             itemType: item.type,
             actionType: actionType
         };
-        await sendItemActionToFirestore(actionData); // Esta função já re-busca e re-renderiza o log.
+        await sendItemActionToFirestore(actionData);
 
-        renderItemLists(); // Renderiza a lista de itens com os novos tempos
+        renderItemLists(); // Re-renderiza a lista de itens com os novos tempos
         updateReservationStatus();
     }
 
@@ -402,10 +431,64 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Inicialização ---
     async function initializeApp() {
         loadLocalData(); // Carrega nickname e reserva do localStorage
-        itemStates = await loadItemStatesFromFirestore(); // Carrega ou inicializa estados dos itens do Firestore
+        
+        // Carrega ou inicializa estados dos itens do Firestore
+        // itemStates será o objeto retornado por loadItemStatesFromFirestore
+        const loadedStates = await loadItemStatesFromFirestore(); 
+        if (loadedStates) {
+            itemStates = loadedStates;
+        } else {
+            // Caso a carga do Firestore falhe e initializeInstanceStatesInFirestore também falhe
+            // (o que não deveria acontecer se o Firebase estiver configurado e regras ok)
+            // itemStates já foi inicializado como {}, mas podemos garantir default values
+            console.warn("[INIT] Falha na carga do Firestore. Inicializando itemStates com defaults internos.");
+            const allItemsFlat = [...items.red, ...items.yellow, ...items.cyan, ...items.resource];
+            allItemsFlat.forEach(item => {
+                if (!itemStates[item.id]) { // Apenas inicializa se não veio do Firestore
+                    if (item.type === 'red') {
+                        itemStates[item.id] = { lastActionTime: null, nextSpawnTime: calculateNextSpecificSpawnTime(item.dailySpawnTimes) };
+                    } else {
+                        itemStates[item.id] = { lastActionTime: null, nextSpawnTime: Date.now() };
+                    }
+                }
+            });
+        }
+        console.log(`%c[INIT] itemStates após carga/inicialização para ${currentInstanceId}:`, 'color: #1abc9c;', itemStates);
+        
         updateUI(); // Renderiza a UI inicialmente
 
+        // Adiciona um listener para atualizações em tempo real do Firestore para itemStates
+        if (window.db && window.onSnapshot && window.firebaseDoc) { // Garante que onSnapshot está disponível
+            const instanceRef = window.firebaseDoc(window.db, 'instanceStates', currentInstanceId);
+            window.onSnapshot(instanceRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const newStates = docSnap.data();
+                    // Compara os estados para evitar renderizações desnecessárias e loops
+                    if (JSON.stringify(itemStates) !== JSON.stringify(newStates)) {
+                        itemStates = newStates;
+                        console.log(`%c[REALTIME] Estados da instância ${currentInstanceId} ATUALIZADOS EM TEMPO REAL.`, 'color: #9b59b6;');
+                        updateUI();
+                    } else {
+                        console.log(`%c[REALTIME] Sem mudanças detectadas para ${currentInstanceId}, ignorando atualização.`, 'color: #9b59b6; opacity: 0.6;');
+                    }
+                } else {
+                    // Documento não existe mais no Firestore, possivelmente apagado
+                    console.warn(`%c[REALTIME] Documento da instância ${currentInstanceId} não existe mais no Firestore!`, 'color: #e74c3c;');
+                    // Pode-se re-inicializar ou mostrar um estado de erro
+                }
+            }, (error) => {
+                console.error(`%c[REALTIME ERROR] Erro ao configurar listener em tempo real para itemStates:`, 'color: #e74c3c;', error);
+            });
+        } else {
+            console.warn("Firestore onSnapshot ou firebaseDoc não estão disponíveis. Atualizações em tempo real desativadas.");
+        }
+
+
         setInterval(updateUI, 1000); // Atualiza os contadores a cada segundo
+        // O fetchActionLogFromFirestore já é chamado após cada sendItemActionToFirestore
+        // e na inicialização. Um intervalo separado pode ser mantido para garantir sincronia,
+        // mas o realtime updates para actionLog seria uma feature mais avançada.
+        // Por enquanto, 1 minuto para o log é um bom equilíbrio.
         setInterval(fetchActionLogFromFirestore, 60000); // Busca o histórico atualizado do Firebase a cada 1 minuto
     }
 
