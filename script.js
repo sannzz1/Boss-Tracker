@@ -1,8 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // COLE O URL DO SEU APLICATIVO WEB DO GOOGLE APPS SCRIPT AQUI!
-    // Este URL é o que você COPIOU no PASSO 2.5
-    const GAS_WEB_APP_URL = https://script.google.com/macros/s/AKfycbxLJY5HdH-o9BNEteiceGxzakWrOofR8pCnYeTBfJJ2nxPLuKIuaWp3n_qZ9iojX0wO/exec; 
-
     // Referências aos elementos HTML
     const redBossListContainer = document.getElementById('redBossListContainer');
     const yellowBossListContainer = document.getElementById('yellowBossListContainer');
@@ -52,15 +48,15 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: 'yellow-boss-2', name: 'Lobo Alfa', type: 'yellow', respawnTime: 60 * 60 * 1000, icon: '🦁' },
         ],
         cyan: [
-            { id: 'cyan-boss-1', name: 'Espírito Ciano (Baixo-direita)', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '🔵' },
+            { id: 'cyan-boss-1', name: 'Espírito Ciano (Baixo-direita)', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '��' },
             { id: 'cyan-boss-2', name: 'Guardião Ciano (Meio-esquerda)', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '' },
-            { id: 'cyan-boss-3', name: 'Protetor Ciano (Meio-superior)', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '🔵' }
+            { id: 'cyan-boss-3', name: 'Protetor Ciano (Meio-superior)', type: 'cyan', respawnTime: 30 * 60 * 1000, icon: '��' }
         ]
     };
 
     let bossStates = {}; // Estado dos timers dos bosses (local no navegador)
     let userReservation = { nickname: '', reservationUntil: null }; // Reserva do usuário (local no navegador)
-    let killLog = []; // Histórico de kills (será carregado da planilha do Google)
+    let killLog = []; // Histórico de kills (será carregado do Firestore)
 
     // --- Funções de Utilitário ---
     function formatTime(ms) {
@@ -77,10 +73,10 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('bossTracker_bossStates', JSON.stringify(bossStates));
         localStorage.setItem('bossTracker_userReservation', JSON.stringify(userReservation));
         localStorage.setItem('bossTracker_lastNickname', nicknameInput.value);
-        // killLog NÃO é salvo localmente, ele é carregado da planilha
+        // killLog NÃO é salvo localmente, ele é carregado do Firestore
     }
 
-    // Carrega dados locais e o histórico da planilha
+    // Carrega dados locais e o histórico do Firestore
     async function loadData() {
         const savedBossStates = localStorage.getItem('bossTracker_bossStates');
         const savedUserReservation = localStorage.getItem('bossTracker_userReservation');
@@ -128,67 +124,67 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         saveData(); // Salva os dados locais atualizados
 
-        // Carrega o histórico de kills da planilha do Google
-        await fetchKillLogFromGoogleSheet(); 
+        // Carrega o histórico de kills do Firestore
+        await fetchKillLogFromFirestore(); 
     }
 
-    // --- Comunicação com Google Apps Script ---
-    // Função para buscar o histórico de kills da planilha
-    async function fetchKillLogFromGoogleSheet() {
-        if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === 'COLE_SEU_URL_DO_APP_WEB_AQUI') {
-            console.error('ERRO: O URL do Google Apps Script não foi configurado em script.js! O histórico não será carregado.');
-            killLogList.innerHTML = '<li>Erro: URL do Apps Script não configurado.</li>';
+    // --- Comunicação com Firebase Firestore ---
+
+    // Função para buscar o histórico de kills do Firestore
+    async function fetchKillLogFromFirestore() {
+        // Verifica se o Firebase foi inicializado (se o db existe)
+        if (!window.db) {
+            console.error('ERRO: Firebase não inicializado. Verifique a configuração no index.html');
+            killLogList.innerHTML = '<li>Erro: Firebase não configurado.</li>';
             return;
         }
         try {
-            const response = await fetch(GAS_WEB_APP_URL, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
+            // Cria uma query para a coleção 'kills', ordenada por 'timestamp'
+            const killsCol = window.firebaseCollection(window.db, 'kills');
+            const q = window.firebaseQuery(killsCol, window.firebaseOrderBy('timestamp', 'desc')); // Ordena do mais novo para o mais antigo
+
+            const querySnapshot = await window.firebaseGetDocs(q);
+            killLog = [];
+            querySnapshot.forEach((doc) => {
+                // doc.data() é o documento em si
+                const data = doc.data();
+                killLog.push({
+                    bossId: data.bossId,
+                    bossName: data.bossName,
+                    user: data.user,
+                    // Firestore armazena timestamps como objetos Timestamp, converta para milissegundos
+                    time: data.timestamp ? data.timestamp.toMillis() : Date.now() 
+                });
             });
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            killLog = data.map(record => ({
-                bossId: record.BossId,
-                bossName: record.BossName,
-                user: record.KilledBy,
-                time: new Date(record.Timestamp).getTime() 
-            }));
             renderKillLog(); // Renderiza o log após carregar
         } catch (error) {
-            console.error('Erro ao buscar histórico da planilha:', error);
-            killLogList.innerHTML = '<li>Erro ao carregar histórico da planilha.</li>';
+            console.error('Erro ao buscar histórico do Firestore:', error);
+            killLogList.innerHTML = '<li>Erro ao carregar histórico do Firebase.</li>';
         }
     }
 
-    // Função para enviar uma nova kill para a planilha
-    async function sendKillToGoogleSheet(killData) {
-        if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === 'COLE_SEU_URL_DO_APP_WEB_AQUI') {
-            console.error('ERRO: O URL do Google Apps Script não foi configurado em script.js! A kill não será registrada.');
-            alert('Erro: O URL do Apps Script não está configurado. A kill não será registrada centralmente.');
+    // Função para enviar uma nova kill para o Firestore
+    async function sendKillToFirestore(killData) {
+        if (!window.db) {
+            console.error('ERRO: Firebase não inicializado. A kill não será registrada.');
+            alert('Erro: Firebase não configurado. A kill não será registrada centralmente.');
             return;
         }
         try {
-            const response = await fetch(GAS_WEB_APP_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(killData),
+            // Adiciona um novo documento à coleção 'kills'
+            const killsCol = window.firebaseCollection(window.db, 'kills');
+            await window.firebaseAddDoc(killsCol, {
+                bossName: killData.bossName,
+                user: killData.user,
+                bossId: killData.bossId,
+                bossType: killData.bossType,
+                timestamp: new Date() // Firestore salva automaticamente como seu tipo Timestamp
             });
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const result = await response.json();
-            if (result.success) {
-                console.log('Kill registrada na planilha:', result.message);
-                await fetchKillLogFromGoogleSheet(); // Atualiza o log após o registro
-            } else {
-                console.error('Erro ao registrar kill na planilha:', result.message);
-                alert(`Erro ao registrar kill: ${result.message}`);
-            }
+            console.log('Kill registrada no Firestore com sucesso!');
+            await fetchKillLogFromFirestore(); // Atualiza o log após o registro
         } catch (error) {
-            console.error('Erro de rede ao enviar kill para planilha:', error);
-            alert('Erro de conexão ao registrar kill. Verifique sua internet.');
+            console.error('Erro ao registrar kill no Firestore:', error);
+            alert('Erro de conexão ao registrar kill no Firebase. Verifique sua internet ou console.');
         }
     }
 
@@ -261,7 +257,8 @@ document.addEventListener('DOMContentLoaded', () => {
             killLogList.innerHTML = '<li>Nenhum registro de kill ainda.</li>';
             return;
         }
-        killLog.sort((a, b) => b.time - a.time).forEach(log => {
+        // killLog já virá ordenado do mais novo para o mais antigo devido à query do Firestore
+        killLog.forEach(log => {
             const li = document.createElement('li');
             li.innerHTML = `<strong>${log.bossName}</strong> morto por <strong>${log.user || 'Desconhecido'}</strong> em ${new Date(log.time).toLocaleString()}`;
             killLogList.appendChild(li);
@@ -313,14 +310,14 @@ document.addEventListener('DOMContentLoaded', () => {
             saveData(); // Salva o novo estado localmente
         }
 
-        // Envia a informação da kill para a planilha do Google
+        // Envia a informação da kill para o Firestore
         const killData = {
             bossName: boss.name,
             user: nickname,
             bossId: boss.id,
             bossType: boss.type
         };
-        await sendKillToGoogleSheet(killData); // Esta função já chamará fetchKillLogFromGoogleSheet e renderKillLog após o sucesso.
+        await sendKillToFirestore(killData); // Esta função já chamará fetchKillLogFromFirestore e renderKillLog após o sucesso.
 
         // Atualiza apenas os elementos que dependem de estado local
         renderBossLists();
@@ -328,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     resetAllDataBtn.addEventListener('click', () => {
-        if (confirm('Tem certeza que deseja apagar TODOS os seus dados LOCAIS (timers, reservas)? O histórico de kills na planilha do Google não será afetado.')) {
+        if (confirm('Tem certeza que deseja apagar TODOS os seus dados LOCAIS (timers, reservas)? O histórico de kills no Firebase não será afetado.')) {
             localStorage.clear();
             location.reload(); // Recarrega a página para resetar o estado
         }
@@ -337,6 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Loop de Atualização ---
     function updateUI() {
         renderBossLists();
+        // renderKillLog() é chamado apenas após fetchKillLogFromFirestore
         updateReservationStatus();
     }
 
@@ -345,7 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateUI(); // Renderiza a UI inicialmente
     setInterval(updateUI, 1000); // Atualiza os contadores a cada segundo
 
-    // A cada 2 minutos (120 segundos), busca o histórico atualizado da planilha
-    setInterval(fetchKillLogFromGoogleSheet, 120000); 
+    // A cada 2 minutos (120 segundos), busca o histórico atualizado do Firebase
+    setInterval(fetchKillLogFromFirestore, 120000); 
 });
-
