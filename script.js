@@ -1,10 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- Nova funcionalidade: Gerenciamento de Instâncias ---
     const currentInstanceId = document.body.dataset.instanceId || 'pico7f'; // Pega o ID da instância do HTML
+    console.log(`Página carregada para a instância: ${currentInstanceId}`); // DEBUG
 
     // Adiciona classe 'active' ao botão de navegação da instância atual
     document.querySelectorAll('.nav-button').forEach(button => {
-        if (button.href.includes(currentInstanceId)) {
+        // Verifica se a URL do botão contém o ID da instância atual.
+        // Ex: Para index.html (Pico 7F), vai procurar 'index.html' no href
+        // Para pico8f.html, vai procurar 'pico8f.html' no href
+        if (button.href.includes(currentInstanceId) || (currentInstanceId === 'pico7f' && button.href.endsWith('index.html'))) {
             button.classList.add('active');
         } else {
             button.classList.remove('active');
@@ -50,13 +54,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Dados de TODOS os Itens (Bosses e Recursos) ---
+    // ESTA LISTA É GLOBAL E APARECE EM TODAS AS PÁGINAS, APENAS SEUS TIMERS SÃO INDIVIDUAIS
     const items = {
         red: [
             { id: 'red-boss-1', name: 'Red Norte', type: 'red', dailySpawnTimes: ['04:00', '10:00', '16:00', '22:00'], icon: '👹' },
-            { id: 'red-boss-2', name: 'Red Sul', type: 'red', dailySpawnTimes: ['01:00', '07:00', '13:00', '19:00'], icon: '🔱' },
+            { id: 'red-boss-2', name: 'Red Sul', type: 'red', dailySpawnTimes: ['01:00', '07:00', '13:00', '19:00'], icon: '��' },
         ],
         yellow: [
-            { id: 'yellow-boss-1', name: 'Amarelo Esquerdo', type: 'yellow', respawnTime: 60 * 60 * 1000, icon: '👺' },
+            { id: 'yellow-boss-1', name: 'Amarelo Esquerdo', type: 'yellow', respawnTime: 60 * 60 * 1000, icon: '��' },
             { id: 'yellow-boss-2', name: 'Amarelo Direito', type: 'yellow', respawnTime: 60 * 60 * 1000, icon: '🦁' },
         ],
         cyan: [
@@ -160,6 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
+            console.log(`[DEBUG] Buscando ações para a instância: ${currentInstanceId}`); // DEBUG
             const actionsCol = window.firebaseCollection(window.db, 'actions'); // Usando nova coleção 'actions'
             // Filtra o log pela instância atual
             const q = window.firebaseQuery(
@@ -169,9 +175,13 @@ document.addEventListener('DOMContentLoaded', () => {
             );
 
             const querySnapshot = await window.firebaseGetDocs(q);
-            actionLog = [];
+            actionLog = []; // Garante que o log local é limpo antes de adicionar novos dados
+            if (querySnapshot.empty) { // DEBUG
+                console.log(`[DEBUG] Nenhuma ação encontrada para a instância: ${currentInstanceId}`); // DEBUG
+            }
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
+                console.log(`[DEBUG] Ação encontrada: ${data.itemName} (Instância: ${data.instanceId}, Usuário: ${data.user})`); // DEBUG
                 actionLog.push({
                     itemId: data.itemId,
                     itemName: data.itemName,
@@ -202,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 itemId: actionData.itemId,
                 itemType: actionData.itemType,
                 actionType: actionData.actionType,
-                instanceId: currentInstanceId,
+                instanceId: currentInstanceId, // Adiciona a instância ao registro
                 timestamp: new Date()
             });
             console.log(`Ação (${actionData.actionType}) registrada no Firestore para a instância ${currentInstanceId} com sucesso!`);
@@ -282,9 +292,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderActionLog() {
-        actionLogList.innerHTML = '';
+        actionLogList.innerHTML = ''; // Limpa o log antes de adicionar novos itens
         if (actionLog.length === 0) {
-            actionLogList.innerHTML = '<li>Nenhum registro de ação ainda.</li>';
+            actionLogList.innerHTML = '<li>Nenhum registro de ação para esta instância ainda.</li>';
             return;
         }
         actionLog.forEach(log => {
@@ -296,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateReservationStatus() {
-        const now = Date.now();
+        const now = Date.Date();
         if (userReservation.nickname && userReservation.reservationUntil > now) {
             const timeLeft = userReservation.reservationUntil - now;
             reservationStatus.textContent = `Sua reserva (${userReservation.nickname}): ${formatTime(timeLeft)}`;
@@ -323,7 +333,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Função handleItemAction movida para dentro do DOMContentLoaded
     async function handleItemAction(itemId, actionType) {
         let item = null;
         const allItemsFlat = [...items.red, ...items.yellow, ...items.cyan, ...items.resource];
@@ -365,6 +374,5 @@ document.addEventListener('DOMContentLoaded', () => {
     updateUI();
     setInterval(updateUI, 1000);
 
-    // Ajustado para 1 minuto para melhor resposta em multi-instância
     setInterval(fetchActionLogFromFirestore, 60000); // Busca o histórico atualizado do Firebase a cada 1 minuto
 });
